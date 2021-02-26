@@ -1,6 +1,12 @@
 Elevator Project
 ================
 
+How to run on Windows:
+- remember to add to enviourement PATH (Miljøvariabler på norsk)
+- Click on GOPATH and select edit
+- add path to project, like "C:/go/project-gruppe-63"
+
+
 
 Summary
 -------
