@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"project-gruppe-63/netmodule/network/conn"
 	"reflect"
 	"strings"
+
+	"../conn"
 )
 
 // Encodes received values from `chans` into type-tagged JSON, then broadcasts
