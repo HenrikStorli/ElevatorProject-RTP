@@ -1,11 +1,18 @@
 Elevator Project
 ================
 
-How to run on Windows:
-- remember to add to enviourement PATH (Miljøvariabler på norsk)
+To fix import issues:
+run "go env -w GO111MODULE=auto" in the terminal
+
+Windows:
+- remember to add to environment GOPATH (Miljøvariabler på norsk)
+- Open Control Panel » System » Advanced » Environment Variables
 - Click on GOPATH and select edit
 - add path to project, like "C:/go/project-gruppe-63"
+- apparently only one path should be set in GOPATH, so delete the existing one
 
+To run:
+"go run ./main.go"
 
 
 Summary
