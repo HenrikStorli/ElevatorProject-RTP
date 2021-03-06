@@ -3,10 +3,11 @@ package netmodule_test
 import (
 	"flag"
 	"fmt"
-	"project-gruppe-63/netmodule"
 	"strconv"
 	"testing"
 	"time"
+
+	"../netmodule"
 )
 
 var idString = flag.String("id", "int", "Id of the elevator")

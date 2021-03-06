@@ -3,11 +3,12 @@ package netmodule
 import (
 	"fmt"
 	"os"
-	"project-gruppe-63/netmodule/network/bcast"
-	"project-gruppe-63/netmodule/network/localip"
-	"project-gruppe-63/netmodule/network/peers"
 	"strconv"
 	"time"
+
+	"./network/bcast"
+	"./network/localip"
+	"./network/peers"
 )
 
 type MoveDirectionType int
