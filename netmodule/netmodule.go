@@ -6,53 +6,16 @@ import (
 	"strconv"
 	"time"
 
+	dt "../datatypes"
 	"./network/bcast"
 	"./network/localip"
 	"./network/peers"
 )
 
-type MoveDirectionType int
-
-const (
-	MovingDown    MoveDirectionType = -1
-	MovingStopped                   = 0
-	MovingUp                        = 1
-)
-
-type MachineStateType int
-
-type OrderStateType int
-
-const (
-	Unknown OrderStateType = iota
-	New
-	Accepted
-	Completed
-)
-
-const (
-	FloorCount    int = 4
-	ElevatorCount     = 3
-	ButtonCount       = 3
-)
-
-type OrderMatrix [ButtonCount][FloorCount]OrderStateType
-
-//ElevatorState ...
-type ElevatorState struct {
-	ElevatorID int
-	//MovingDirection MoveDirectionType
-	//Floor           int
-	//State           MachineStateType
-	//IsFunctioning   bool
-	//OrderMatrix     OrderMatrix
-	TestText string
-}
-
-//NetworkPackage is...
-type NetworkPackage struct {
-	SenderID  int
-	NewStates [ElevatorCount]ElevatorState
+type networkPackage struct {
+	SenderID         int
+	NewStates        [dt.ElevatorCount]dt.ElevatorState
+	NewOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType
 }
 
 //NetworkPorts is ...
@@ -63,12 +26,11 @@ type NetworkPorts struct {
 	BcastTxPort int
 }
 
-//NetworkChannels is ...
-type NetworkChannels struct {
+type networkChannelsType struct {
 	PeerTxEnable chan bool
 	PeerUpdateCh chan peers.PeerUpdate
-	ReceiveCh    chan NetworkPackage
-	TransmitCh   chan NetworkPackage
+	ReceiveCh    chan networkPackage
+	TransmitCh   chan networkPackage
 }
 
 const (
@@ -78,28 +40,30 @@ const (
 
 //RunNetworkModule is
 func RunNetworkModule(elevatorID int, networkPorts NetworkPorts,
-	sendStateCh <-chan [ElevatorCount]ElevatorState,
-	receivedStateCh chan<- [ElevatorCount]ElevatorState,
+	outgoingStateCh <-chan [dt.ElevatorCount]dt.ElevatorState,
+	incomingStateCh chan<- [dt.ElevatorCount]dt.ElevatorState,
+	outgoingOrderCh <-chan [dt.ElevatorCount]dt.OrderMatrixType,
+	incomingOrderCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
 	disconnectingElevatorIDCh chan<- int,
 	connectingElevatorIDCh chan<- int) {
 
-	networkChannels := NetworkChannels{
+	networkChannels := networkChannelsType{
 		PeerTxEnable: make(chan bool),
 		PeerUpdateCh: make(chan peers.PeerUpdate),
-		ReceiveCh:    make(chan NetworkPackage),
-		TransmitCh:   make(chan NetworkPackage),
+		ReceiveCh:    make(chan networkPackage),
+		TransmitCh:   make(chan networkPackage),
 	}
 
 	initNetworkConnections(elevatorID, networkPorts, networkChannels)
 
-	go sendStateUpdate(elevatorID, networkChannels, sendStateCh, resendCount, resendInterval)
+	go sendNetworkPackage(elevatorID, networkChannels, outgoingStateCh, outgoingOrderCh, resendCount, resendInterval)
 
-	go receiveStateUpdates(elevatorID, networkChannels, receivedStateCh, true)
+	go receiveNetworkPackage(elevatorID, networkChannels, incomingStateCh, incomingOrderCh, true, true)
 
 	go checkForPeerUpdates(elevatorID, networkChannels, disconnectingElevatorIDCh, connectingElevatorIDCh)
 }
 
-func initNetworkConnections(elevatorID int, networkPorts NetworkPorts, networkChannels NetworkChannels) {
+func initNetworkConnections(elevatorID int, networkPorts NetworkPorts, networkChannels networkChannelsType) {
 
 	//TODO: try to find existing elevators and gain id from them?
 	//This would probably not work, I think elevators should have fixed ids
@@ -111,18 +75,32 @@ func initNetworkConnections(elevatorID int, networkPorts NetworkPorts, networkCh
 	go bcast.Receiver(networkPorts.BcastRxPort, networkChannels.ReceiveCh)
 }
 
-func sendStateUpdate(elevatorID int, networkChannels NetworkChannels, sendStateCh <-chan [ElevatorCount]ElevatorState, resendCount int, resendInterval int) {
+func sendNetworkPackage(elevatorID int, networkChannels networkChannelsType, outgoingStateCh <-chan [dt.ElevatorCount]dt.ElevatorState, outgoingOrderCh <-chan [dt.ElevatorCount]dt.OrderMatrixType, resendCount int, resendInterval int) {
 
 	intervalMillis := time.Duration(resendInterval) * time.Millisecond
+	var nilOrders [dt.ElevatorCount]dt.OrderMatrixType
+	var nilStates [dt.ElevatorCount]dt.ElevatorState
 	for {
 		select {
-		case newStates := <-sendStateCh:
+		case newStates := <-outgoingStateCh:
 
-			newStatePackage := NetworkPackage{elevatorID, newStates}
+			newPackage := networkPackage{elevatorID, newStates, nilOrders}
 
 			for i := 0; i < resendCount; i++ {
 				//Queue the package for sending
-				networkChannels.TransmitCh <- newStatePackage
+				networkChannels.TransmitCh <- newPackage
+
+				//Wait for next resend
+				time.Sleep(intervalMillis)
+			}
+
+		case newOrders := <-outgoingOrderCh:
+
+			newPackage := networkPackage{elevatorID, nilStates, newOrders}
+
+			for i := 0; i < resendCount; i++ {
+				//Queue the package for sending
+				networkChannels.TransmitCh <- newPackage
 
 				//Wait for next resend
 				time.Sleep(intervalMillis)
@@ -132,29 +110,43 @@ func sendStateUpdate(elevatorID int, networkChannels NetworkChannels, sendStateC
 	}
 }
 
-func receiveStateUpdates(elevatorID int, networkChannels NetworkChannels, receivedStateCh chan<- [ElevatorCount]ElevatorState, discardOwnPackages bool) {
-	//TODO: Receive new states on StateReceiveCh
-	//Update the current state based on whom sent it and what it contains
+func receiveNetworkPackage(elevatorID int, networkChannels networkChannelsType,
+	incomingStateCh chan<- [dt.ElevatorCount]dt.ElevatorState,
+	incomingOrderCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
+	discardOwnPackages bool,
+	discardRepeatingPackages bool) {
+
+	var nilOrders [dt.ElevatorCount]dt.OrderMatrixType
+	var nilStates [dt.ElevatorCount]dt.ElevatorState
+
+	var lastPackageReceived networkPackage
+
 	for {
 		select {
 		case newPackage := <-networkChannels.ReceiveCh:
+
+			//discard repeating packages
+			if discardRepeatingPackages && newPackage == lastPackageReceived {
+				continue
+			}
 
 			//Discard any packages that was sent by this elevator
 			if discardOwnPackages && newPackage.SenderID == elevatorID {
 				continue
 			}
 
-			//TODO: Handle received data
-			receivedStateCh <- newPackage.NewStates
+			if newPackage.NewStates != nilStates {
+				incomingStateCh <- newPackage.NewStates
+			}
+			if newPackage.NewOrderMatrices != nilOrders {
+				incomingOrderCh <- newPackage.NewOrderMatrices
+			}
+			lastPackageReceived = newPackage
 		}
 	}
 }
 
-//CheckForPeerUpdates is
-//TODO: add interface for updating list of connected elevators
-//TODO: how to sense that a newly connected peer is the missing one?
-//TODO: handle peer update if the disconnected elevator is THIS elevator
-func checkForPeerUpdates(elevatorID int, networkChannels NetworkChannels, disconnectingElevatorIDCh chan<- int, connectingElevatorIDCh chan<- int) {
+func checkForPeerUpdates(elevatorID int, networkChannels networkChannelsType, disconnectingElevatorIDCh chan<- int, connectingElevatorIDCh chan<- int) {
 
 	for {
 		select {
