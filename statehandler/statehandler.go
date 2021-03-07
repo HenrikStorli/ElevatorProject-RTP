@@ -1,8 +1,6 @@
 package statehandler
 
 import (
-	"net"
-
 	dt "../datatypes"
 )
 
@@ -19,6 +17,7 @@ func RunStateHandlerModule(elevatorID int,
 
 	//interface towards order scheduler
 	stateUpdateCh chan<- [dt.ElevatorCount]dt.ElevatorState,
+	orderUpdateCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
 
 	//Interface towards elevator driver
 	driverStateUpdateCh <-chan dt.ElevatorState,
@@ -34,73 +33,93 @@ func RunStateHandlerModule(elevatorID int,
 		select {
 		case newOrderMatrices := <-incomingOrderCh:
 			//TODO: add set lights
-			updatedOrderMatrices := updateOrders(elevatorID, newOrderMatrices, orderMatrices)
-			orderMatrices = updatedOrderMatrices
+			updatedOrderMatrices := updateOrders(newOrderMatrices, orderMatrices)
 
-			acceptedOrderMatrices := acceptNewOrders(elevatorID, orderMatrices)
+			acceptedOrderMatrices := acceptNewOrders(elevatorID, updatedOrderMatrices)
+
+			go sendAcceptedOrders(elevatorID, acceptedOrderMatrices, acceptedOrderCh)
+			go sendOrderUpdate(acceptedOrderMatrices, orderUpdateCh, outgoingOrderCh)
+
 			orderMatrices = acceptedOrderMatrices
-
-			go sendAcceptedOrders(elevatorID, acceptedOrderCh, orderMatrices)
 
 		case newState := <-incomingStateCh:
 			updatedStates := updateStates(elevatorID, newState, elevatorStates)
-			elevatorStates = updatedStates
 
+			go sendStateUpdate(updatedStates, stateUpdateCh)
+
+			elevatorStates = updatedStates
 		case newDriverStateUpdate := <-driverStateUpdateCh:
 			updatedStates := updateOwnState(elevatorID, newDriverStateUpdate, elevatorStates)
 
-			sendStateToNetwork(updatedStates, outgoingStateCh)
+			go sendOwnStateUpdate(newDriverStateUpdate, outgoingStateCh)
+			go sendStateUpdate(updatedStates, stateUpdateCh)
 
 			elevatorStates = updatedStates
-			
+
 		case completedOrder := <-completedOrderCh:
-			updatedOrderMatrices := updateCompletedOrder(elevatorID,completedOrder, orderMatrices)
+			updatedOrderMatrices := updateCompletedOrder(elevatorID, completedOrder, orderMatrices)
+
+			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
+
 			orderMatrices = updatedOrderMatrices
 
 		case disconnectingElevatorID := <-disconnectingElevatorIDCh:
-			updatedStates := handleDisconnectingElevator(disconnectingElevatorID,elevatorStates)
+			updatedStates := handleDisconnectingElevator(disconnectingElevatorID, elevatorStates)
 			elevatorStates = updatedStates
-
 		}
 	}
 }
 
-func acceptNewOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
-	updatedOrderMatrices := newOrderMatrices
-	newOwnOrderMatrix := newOrderMatrices[elevatorID]
-	for btn, row := range newOwnOrderMatrix {
-		for floor, newOrder := range row {
-			if newOrder == dt.New {
-				updatedOrderMatrices[btn][floor] = dt.Accepted
-			}
-		}
-	}
-	return updatedOrderMatrices
+func sendOrderUpdate(newOrders [dt.ElevatorCount]dt.OrderMatrixType, orderUpdateCh chan<- [dt.ElevatorCount]dt.OrderMatrixType, outgoingOrderCh chan<- [dt.ElevatorCount]dt.OrderMatrixType) {
+	go func() { orderUpdateCh <- newOrders }()
+	go func() { outgoingOrderCh <- newOrders }()
 }
 
-func sendStateToNetwork(state dt.ElevatorState, outgoingStateCh chan dt.ElevatorState){
-	outgoingStateCh <-state
+func sendStateUpdate(newStates [dt.ElevatorCount]dt.ElevatorState, stateUpdateCh chan<- [dt.ElevatorCount]dt.ElevatorState) {
+	stateUpdateCh <- newStates
 }
 
-func sendAcceptedOrders(elevatorID int, acceptedOrderCh chan<- dt.OrderType, newOrderMatrix dt.OrderMatrixType) {
-	newOwnOrderMatrix := newOrderMatrices[elevatorID]
-	for btn, row := range newOwnOrderMatrix {
+func sendOwnStateUpdate(state dt.ElevatorState, outgoingStateCh chan<- dt.ElevatorState) {
+	outgoingStateCh <- state
+}
+
+func sendAcceptedOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, acceptedOrderCh chan<- dt.OrderType) {
+	indexID := elevatorID - 1
+	newOwnOrderMatrix := newOrderMatrices[indexID]
+	for rowIndex, row := range newOwnOrderMatrix {
+		btn := dt.ButtonType(rowIndex)
 		for floor, newOrder := range row {
 			if newOrder == dt.Accepted {
-				acceptedOrder := dt.OrderType{btn, floor}
+				acceptedOrder := dt.OrderType{Button: btn, Floor: floor}
 				acceptedOrderCh <- acceptedOrder
 			}
 		}
 	}
 }
 
-func updateOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, oldOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
+func acceptNewOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
+	indexID := elevatorID - 1
+	updatedOrderMatrices := newOrderMatrices
+	newOwnOrderMatrix := newOrderMatrices[indexID]
+	for btn, row := range newOwnOrderMatrix {
+		for floor, newOrder := range row {
+			if newOrder == dt.New {
+				updatedOrderMatrices[indexID][btn][floor] = dt.Accepted
+			}
+		}
+
+	}
+	return updatedOrderMatrices
+}
+
+func updateOrders(newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, oldOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
+
 	updatedOrderMatrices := oldOrderMatrices
-	for elevator, orderMatrix := range newOrderMatrices {
+	for indexID, orderMatrix := range newOrderMatrices {
 		for btn, row := range orderMatrix {
 			for floor, newOrder := range row {
-				oldOrder := updatedOrderMatrices[elevatorID][btn][floor]
-				oldOrder = updateSingleOrder(newOrder, oldOrder)
+				oldOrder := &updatedOrderMatrices[indexID][btn][floor]
+				*oldOrder = updateSingleOrder(newOrder, *oldOrder)
 			}
 		}
 	}
@@ -110,62 +129,66 @@ func updateOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMat
 func updateSingleOrder(newOrder dt.OrderStateType, oldOrder dt.OrderStateType) dt.OrderStateType {
 
 	updatedOrder := oldOrder
-	select {
-	case oldOrder == dt.Unknown:
+	switch oldOrder {
+	case dt.Unknown:
 		updatedOrder = newOrder
-	case oldOrder == dt.New:
+	case dt.New:
 		if newOrder == dt.Accepted {
 			updatedOrder = newOrder
 		}
-	case oldOrder == dt.Accepted:
+	case dt.Accepted:
 		if newOrder == dt.Completed {
 			updatedOrder = newOrder
 		}
-	case oldOrder == dt.Completed:
+	case dt.Completed:
 		if newOrder == dt.New {
-			updateOrder = newOrder
+			updatedOrder = newOrder
 		}
 	}
 
 	return updatedOrder
 }
 
-func updateCompletedOrder(elevatorID, completedOrder dt.OrderType, oldOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
+func updateCompletedOrder(elevatorID int, completedOrder dt.OrderType, oldOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
+	indexID := elevatorID - 1
 	updatedOrderMatrices := oldOrderMatrices
 	floor := completedOrder.Floor
 	btn := completedOrder.Button
-	
-	oldOrder := updatedOrderMatrices[elevatorID][btn][floor] 
-	oldOrder = updateSingleOrder(dt.Completed, oldOrder)
+
+	oldOrder := &updatedOrderMatrices[indexID][btn][floor]
+	*oldOrder = updateSingleOrder(dt.Completed, *oldOrder)
 
 	return updatedOrderMatrices
 }
 
-func updateStates(elevatorID int, newStateUpdate ElevatorState, oldStates [dt.ElevatorCount]dt.ElevatorState) [dt.ElevatorCount]dt.ElevatorState {
+func updateStates(elevatorID int, newStateUpdate dt.ElevatorState, oldStates [dt.ElevatorCount]dt.ElevatorState) [dt.ElevatorCount]dt.ElevatorState {
 	updatedStates := oldStates
-	
-	if newStateUpdate.ElevatorID == elevatorID{
+
+	if newStateUpdate.ElevatorID == elevatorID {
 		return updatedStates
 	}
 
-	for id, _ := range updatedStates{
-		if id == newStateUpdate.ElevatorID{
-			updatedStates[id] = newStateUpdate
+	for id := range updatedStates {
+		if id == newStateUpdate.ElevatorID {
+			indexID := id - 1
+			updatedStates[indexID] = newStateUpdate
 		}
 	}
-	
-	return updatedStates
-}
-
-func updateOwnState(elevatorID int, newState ElevatorState, oldStates [dt.ElevatorCount]ElevatorState) [dt.ElevatorCount]dt.ElevatorState {
-	updatedStates := oldStates
-	updatedStates[elevatorID] = newState
 
 	return updatedStates
 }
 
-func handleDisconnectingElevator(disconnectingElevatorID int, oldStates [dt.ElevatorCount]ElevatorState) [dt.ElevatorCount]dt.ElevatorState){
+func updateOwnState(elevatorID int, newState dt.ElevatorState, oldStates [dt.ElevatorCount]dt.ElevatorState) [dt.ElevatorCount]dt.ElevatorState {
+	indexID := elevatorID - 1
 	updatedStates := oldStates
-	updatedStates[disconnectingElevatorID].IsFunctioning = false
+	updatedStates[indexID] = newState
+
+	return updatedStates
+}
+
+func handleDisconnectingElevator(disconnectingElevatorID int, oldStates [dt.ElevatorCount]dt.ElevatorState) [dt.ElevatorCount]dt.ElevatorState {
+	updatedStates := oldStates
+	indexID := disconnectingElevatorID - 1
+	updatedStates[indexID].IsFunctioning = false
 	return oldStates
 }
