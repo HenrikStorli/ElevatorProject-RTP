@@ -29,7 +29,9 @@ type OrderStateType int
 
 const (
 	Unknown OrderStateType = iota
+	None
 	New
+	Acknowledged
 	Accepted
 	Completed
 )
