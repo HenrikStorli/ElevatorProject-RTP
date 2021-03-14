@@ -7,33 +7,60 @@ import{
 //Local variables needed in the moduel
 
 
-func runscheduler(ch_orderFromHardware <-chan ButtonEvent,
-                  ch_updatedOrderMatrix chan<- OrderMatrix,
-                  ch_elevatorStateReceiver <-chan ElevatorStates){
+func runOrdersScheduler(newOrderIOCh <-chan OrderType,
+                        newOrderSHCh <-chan OrderType,
+                        ElevatorStatesCh <-chan [dt.ElevatorCount]dt.ElevatorState,
+                        orderMatricesCh <-chan [dt.ElevatorCount]dt.OrderMatrixType,
+                        updateOrderMatricesCh chan<- [dt.ElevatorCount]dt.OrderMatrixType
 
-  // Possibly initialize some values.
+){
+        var elevatorStatesCopy [dt.ElevatorCount]dt.ElevatorState
+        var orderMatricesCopy[dt.ElevatorCount]dt.OrderMatrixType
 
-    for{
-    select
-    case newOrder:= <- ch_orderFromHardware:
-      chosenElevator:= compareCostFunctions(elevators,newOrder)
-      chosenElevator.OrderMatrix[newOrder.Floor][newOrder.Button] = "new"
-    case elevators:= <-ch_elevatorStateReceiver
-      //Maybe unwrape the data in "elevators" to "elevator1", "elevtor2" etc.
-      disfunctioningElevators:= elevatorsNotFunctioning(elevators)
-      for floor:= 1; floor < NumFloors; ++{ // Check order at every floor
-        for buttonType:= 0; buttonType < 2; ++{ // Check only hall orders
-          for every elevator in disfunctioningElevators {
-              if disfunctioningElevator.OrderMatrix[floor][buttonType] == "accpted"{
-                newOrder:= {floor, buttonType}
-              }else if  disfunctioningElevator.OrderMatrix[floor][buttonType] == "new"{
-                newOrder:= {floor, buttonType}
-              } // else if
-              chosenElevator:= compareCostFunctions(elevators, newOrder)
-              chosenElevator.OrderMatrix[newOrder.Floor][newOrder.Button] = "new"
-              disfunctioningElevator.OrderMatrix[floor][buttonType] = "unknown"
-          } // for
-        } // for
-      } // for
-  } //for
-} // function
+        elevatorStatesCopy <- elevatorStatesCh
+        orderMatricesCopy <- orderMatricesCh
+
+        for{
+                select{
+                case newOrder := <- newOrderIOCh:
+						updatedOrderMatrices:= placeOrder(newOrder, elevatorStatesCopy, orderMatricesCopy)
+						updateOrderMatricesCh <- updatedOrderMatrices
+
+				case newOrder := <- newOrderSHCh:
+						updatedOrderMatrices:= placeOrder(newOrder, elevatorStatesCopy, orderMatricesCopy)
+						updateOrderMatricesCh <- updatedOrderMatrices
+
+                case elevatorStatesCopy <- elevatorStatesCh:
+
+                case orderMatricesCopy <- orderMatricesCh:
+                }
+        }
+
+
+}
+
+
+func placeOrder(newOrder dt.OrderType,
+				elevatorStates [dt.ElevatorCount]dt.ElevatorState,
+				orderMatrices[dt.ElevatorCount]dt.OrderMatrixType
+				) [dt.ElevatorCount]dt.OrderMatrixType
+{
+		var fastestElevatorIndex int = 0
+		var fastestExecutionTime int = 1000
+
+		for elevatorIndex, state := range elevatorStates{
+				if state.IsFunctioning {
+						executionTime: = TimeToIdle(state, orderMatrices[elevatorIndex] )
+
+						if executionTime < fastestExecutionTime {
+								fastestExecutionTime = executionTime
+								fastestElevatorIndex = elevatorIndex
+						}
+				}
+		}
+
+		var updatedOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType = orderMatrices
+		updatedOrderMatrices[fastestElevatorIndex][newOrder.ButtonType][newOrder.floor] = dt.New
+
+		return updatedOrderMatrices
+}
