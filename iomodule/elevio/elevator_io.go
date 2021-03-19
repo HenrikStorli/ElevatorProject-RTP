@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	dt "../datatypes"
+	dt "../../datatypes"
 )
 
 const _pollRate = 20 * time.Millisecond
