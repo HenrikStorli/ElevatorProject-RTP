@@ -21,7 +21,6 @@ func TestNetworkModule(*testing.T) {
 	}
 
 	fmt.Println("Testing Statehandler Module")
-
 	//Create channels
 	outgoingStateCh := make(chan dt.ElevatorState)
 	incomingStateCh := make(chan dt.ElevatorState)
@@ -33,18 +32,22 @@ func TestNetworkModule(*testing.T) {
 	orderUpdateCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
 
 	driverStateUpdateCh := make(chan dt.ElevatorState)
+	acceptedOrderCh := make(chan dt.OrderType)
+	completedOrderCh := make(chan dt.OrderType)
 
 	disconnectCh := make(chan int)
-
-	acceptedOrderCh := make(chan dt.OrderType)
-
-	completedOrderCh := make(chan dt.OrderType)
+	connectCh := make(chan int)
+	newOrdersCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
+	redirectedOrderCh := make(chan dt.OrderType)
 
 	go statehandler.RunStateHandlerModule(id1, incomingOrderCh, outgoingOrderCh,
 		incomingStateCh, outgoingStateCh,
 		disconnectCh,
+		connectCh,
 		stateUpdateCh,
 		orderUpdateCh,
+		newOrdersCh,
+		redirectedOrderCh,
 		driverStateUpdateCh,
 		acceptedOrderCh,
 		completedOrderCh)
@@ -54,11 +57,14 @@ func TestNetworkModule(*testing.T) {
 	var mockState dt.ElevatorState
 	var mockOrders [dt.ElevatorCount]dt.OrderMatrixType
 	mockOrders[0][0][0] = dt.New
+	mockOrders[1][0][0] = dt.New
+	mockOrders[1][1][0] = dt.New
+	mockOrders[1][2][0] = dt.Accepted
 	fmt.Println(mockOrders)
 	go func() {
 		for {
 
-			mockState = dt.ElevatorState{ElevatorID: 2, MovingDirection: dt.MovingDown, Floor: 1, State: 1, IsFunctioning: true}
+			mockState = dt.ElevatorState{ElevatorID: 2, MovingDirection: dt.MovingUp, Floor: 1, State: 1, IsFunctioning: true}
 			driverState := dt.ElevatorState{ElevatorID: 1, MovingDirection: dt.MovingDown, Floor: 2, State: 4, IsFunctioning: true}
 
 			incomingStateCh <- mockState
@@ -73,6 +79,8 @@ func TestNetworkModule(*testing.T) {
 			completedOrderCh <- dt.OrderType{Button: dt.BtnHallUp, Floor: 0}
 			fmt.Println("Sent completed order")
 			time.Sleep(5 * time.Second)
+			disconnectCh <- 2
+			fmt.Println("Sent disconnect elevator 2")
 
 		}
 	}()
@@ -97,7 +105,11 @@ func TestNetworkModule(*testing.T) {
 		case orderUpdate := <-orderUpdateCh:
 			fmt.Print("order update: ")
 			fmt.Println(orderUpdate)
+		case redirectedOrder := <-redirectedOrderCh:
+			fmt.Print("redirected order: ")
+			fmt.Println(redirectedOrder)
 		}
+
 	}
 
 }

@@ -1,6 +1,8 @@
 package statehandler
 
 import (
+	"time"
+
 	dt "../datatypes"
 )
 
@@ -14,10 +16,13 @@ func RunStateHandlerModule(elevatorID int,
 	incomingStateCh <-chan dt.ElevatorState,
 	outgoingStateCh chan<- dt.ElevatorState,
 	disconnectingElevatorIDCh <-chan int,
+	connectingElevatorIDCh <-chan int,
 
 	//interface towards order scheduler
 	stateUpdateCh chan<- [dt.ElevatorCount]dt.ElevatorState,
 	orderUpdateCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
+	newOrdersCh <-chan [dt.ElevatorCount]dt.OrderMatrixType,
+	redirectedOrderCh chan<- dt.OrderType,
 
 	//Interface towards elevator driver
 	driverStateUpdateCh <-chan dt.ElevatorState,
@@ -32,15 +37,23 @@ func RunStateHandlerModule(elevatorID int,
 	for {
 		select {
 		case newOrderMatrices := <-incomingOrderCh:
-			//TODO: add set lights
 			updatedOrderMatrices := updateOrders(newOrderMatrices, orderMatrices)
 
-			acceptedOrderMatrices := acceptNewOrders(elevatorID, updatedOrderMatrices)
+			updatedOrderMatrices = acknowledgeNewOrders(elevatorID, updatedOrderMatrices)
+			updatedOrderMatrices = acceptAcknowledgedOrders(elevatorID, updatedOrderMatrices)
 
-			go sendAcceptedOrders(elevatorID, acceptedOrderMatrices, acceptedOrderCh)
-			go sendOrderUpdate(acceptedOrderMatrices, orderUpdateCh, outgoingOrderCh)
+			go sendAcceptedOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
+			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
 
-			orderMatrices = acceptedOrderMatrices
+			orderMatrices = updatedOrderMatrices
+
+		case newOrders := <-newOrdersCh:
+			//TODO: add set lights
+			updatedOrderMatrices := updateOrders(newOrders, orderMatrices)
+
+			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
+
+			orderMatrices = updatedOrderMatrices
 
 		case newState := <-incomingStateCh:
 			updatedStates := updateStates(elevatorID, newState, elevatorStates)
@@ -65,6 +78,14 @@ func RunStateHandlerModule(elevatorID int,
 
 		case disconnectingElevatorID := <-disconnectingElevatorIDCh:
 			updatedStates := handleDisconnectingElevator(disconnectingElevatorID, elevatorStates)
+			go sendStateUpdate(updatedStates, stateUpdateCh)
+
+			go redirectOrders(disconnectingElevatorID, orderMatrices, redirectedOrderCh)
+
+			updatedOrderMatrices := removeRedirectedOrders(disconnectingElevatorID, orderMatrices)
+			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
+
+			orderMatrices = updatedOrderMatrices
 			elevatorStates = updatedStates
 		}
 	}
@@ -84,6 +105,7 @@ func sendOwnStateUpdate(state dt.ElevatorState, outgoingStateCh chan<- dt.Elevat
 }
 
 func sendAcceptedOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, acceptedOrderCh chan<- dt.OrderType) {
+	//TODO: add timeout timer for accepted orders
 	indexID := elevatorID - 1
 	newOwnOrderMatrix := newOrderMatrices[indexID]
 	for rowIndex, row := range newOwnOrderMatrix {
@@ -97,17 +119,33 @@ func sendAcceptedOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.Or
 	}
 }
 
-func acceptNewOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
+func acceptAcknowledgedOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
 	indexID := elevatorID - 1
 	updatedOrderMatrices := newOrderMatrices
 	newOwnOrderMatrix := newOrderMatrices[indexID]
 	for btn, row := range newOwnOrderMatrix {
 		for floor, newOrder := range row {
-			if newOrder == dt.New {
+			if newOrder == dt.Acknowledged {
 				updatedOrderMatrices[indexID][btn][floor] = dt.Accepted
 			}
 		}
+	}
+	return updatedOrderMatrices
+}
 
+func acknowledgeNewOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
+	indexID := elevatorID - 1
+	updatedOrderMatrices := newOrderMatrices
+	for id, ordermatrix := range newOrderMatrices {
+		if id != indexID {
+			for btn, row := range ordermatrix {
+				for floor, newOrder := range row {
+					if newOrder == dt.New {
+						updatedOrderMatrices[id][btn][floor] = dt.Acknowledged
+					}
+				}
+			}
+		}
 	}
 	return updatedOrderMatrices
 }
@@ -126,14 +164,23 @@ func updateOrders(newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, oldOrde
 	return updatedOrderMatrices
 }
 
+//Updates a single order based on the order update rules
 func updateSingleOrder(newOrder dt.OrderStateType, oldOrder dt.OrderStateType) dt.OrderStateType {
 
 	updatedOrder := oldOrder
 	switch oldOrder {
 	case dt.Unknown:
 		updatedOrder = newOrder
+	case dt.None:
+		if newOrder == dt.Acknowledged {
+			updatedOrder = newOrder
+		}
 	case dt.New:
-		if newOrder == dt.Accepted {
+		if newOrder == dt.Acknowledged {
+			updatedOrder = newOrder
+		}
+	case dt.Acknowledged:
+		if newOrder == dt.Accepted || newOrder == dt.Completed {
 			updatedOrder = newOrder
 		}
 	case dt.Accepted:
@@ -141,11 +188,10 @@ func updateSingleOrder(newOrder dt.OrderStateType, oldOrder dt.OrderStateType) d
 			updatedOrder = newOrder
 		}
 	case dt.Completed:
-		if newOrder == dt.New {
+		if newOrder == dt.None {
 			updatedOrder = newOrder
 		}
 	}
-
 	return updatedOrder
 }
 
@@ -168,9 +214,9 @@ func updateStates(elevatorID int, newStateUpdate dt.ElevatorState, oldStates [dt
 		return updatedStates
 	}
 
-	for id := range updatedStates {
+	for indexID := range updatedStates {
+		id := indexID + 1
 		if id == newStateUpdate.ElevatorID {
-			indexID := id - 1
 			updatedStates[indexID] = newStateUpdate
 		}
 	}
@@ -191,4 +237,58 @@ func handleDisconnectingElevator(disconnectingElevatorID int, oldStates [dt.Elev
 	indexID := disconnectingElevatorID - 1
 	updatedStates[indexID].IsFunctioning = false
 	return oldStates
+}
+
+//Sends hall calls of the disconnecting elevator to the order scheduler
+func redirectOrders(disconnectingElevatorID int, oldOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, redirectedOrderCh chan<- dt.OrderType) {
+	//Wait to make sure the state of the disconnected elevator has reached order scheduler
+	time.Sleep(time.Millisecond * 10)
+	indexID := disconnectingElevatorID - 1
+	ownOrderMatrix := oldOrderMatrices[indexID]
+
+	for rowIndex, row := range ownOrderMatrix {
+		btn := dt.ButtonType(rowIndex)
+		//We dont redistribute cab calls
+		if btn == dt.BtnCab {
+			continue
+		}
+		for floor, orderState := range row {
+			//Dont redistribute non-existing orders
+			if isOrderActive(orderState) {
+				order := dt.OrderType{Button: btn, Floor: floor}
+				redirectedOrderCh <- order
+				//Wait a tiny bit to avoiding locking the order scheduler
+				//time.Sleep(time.Millisecond * 1)
+			}
+		}
+	}
+
+}
+
+func removeRedirectedOrders(disconnectingElevatorID int, oldOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
+	updatedOrderMatrices := oldOrderMatrices
+	indexID := disconnectingElevatorID - 1
+	ownOrderMatrix := oldOrderMatrices[indexID]
+
+	for rowIndex, row := range ownOrderMatrix {
+		btn := dt.ButtonType(rowIndex)
+		for floor, orderState := range row {
+			newOrderState := dt.None
+			//We dont remove cab calls, but set them as Acknowledged
+			//So that when the elevator reconnects it will execute the orders if it restarted
+			if btn == dt.BtnCab && isOrderActive(orderState) {
+				newOrderState = dt.Acknowledged
+			}
+			oldOrder := &updatedOrderMatrices[indexID][rowIndex][floor]
+			*oldOrder = newOrderState
+		}
+	}
+	return updatedOrderMatrices
+}
+
+func isOrderActive(orderState dt.OrderStateType) bool {
+	if orderState == dt.None || orderState == dt.Completed || orderState == dt.Unknown {
+		return false
+	}
+	return true
 }
