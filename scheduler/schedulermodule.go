@@ -57,7 +57,7 @@ func placeOrder(
 	}
 
 	var updatedOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType = orderMatrices
-	updatedOrderMatrices[fastestElevatorIndex][newOrder.ButtonType][newOrder.floor] = dt.New
+	updatedOrderMatrices[fastestElevatorIndex][newOrder.Button][newOrder.Floor] = dt.New
 
 	return updatedOrderMatrices
 }

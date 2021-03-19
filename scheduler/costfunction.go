@@ -1,33 +1,38 @@
 package scheduler
 
-func TimeToIdle(elevator ElevatorStates) int {
+import (
+	dt "../datatypes"
+)
+
+func TimeToIdle(elevator dt.ElevatorState, ordermatrix dt.OrderMatrixType) int {
 	var duration int = 0
 
-	switch elevator.state {
-	case Idle:
-		newDirection = chooseDirection(elevator)
-		if newDirection == MovementStop {
+	switch elevator.State {
+	case dt.Idle:
+		newDirection := chooseDirection(elevator)
+		if newDirection == dt.MovingStopped {
 			return duration
 		}
-	case Moving:
+	case dt.Moving:
 		duration += timeToTravel() / 2
-		elevator.floor += elevator.Direction
-	case OpenDoorState:
+		elevator.Floor += int(elevator.MovingDirection)
+	case dt.DoorOpen:
 		duration -= DoorOpenTime / 2
 	}
 
 	for {
 		if ElevatorShouldStop(elevator) {
-			elevator = clearOrdersAtCurrentFloor(elevator, NULL) // NULL means that the orders shouldnt really be cleared.
+			elevator = clearOrdersAtCurrentFloor(elevator, nil) // nil means that the orders shouldnt really be cleared.
 			duration += DoorOpenTime
-			elevator.Direction = chooseDirection(elevator)
-			if elevator.Direction == MovementStop {
+			elevator.MovingDirection = chooseDirection(elevator)
+			if elevator.MovingDirection == dt.MovingStopped {
 				return duration
 			}
 		}
-		e.floor += elevator.Direction
+		elevator.Floor += int(elevator.MovingDirection)
 		duration += timeToTravel()
 	}
+	return duration
 }
 
 func timeToTravel() int {
