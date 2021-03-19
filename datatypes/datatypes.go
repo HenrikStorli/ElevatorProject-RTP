@@ -52,3 +52,11 @@ type ElevatorState struct {
 	State           MachineStateType
 	IsFunctioning   bool
 }
+
+const (
+	Init MachineStateType = iota
+	Idle 
+	Moving 
+	DoorOpen 
+	Error
+)
