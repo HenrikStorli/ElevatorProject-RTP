@@ -1,4 +1,4 @@
-package statemachine
+package elevatordriver
 
 import (
 	dt "../datatypes"
