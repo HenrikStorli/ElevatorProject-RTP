@@ -4,42 +4,85 @@ import (
 	dt "../datatypes"
 )
 
+type orderMatrixBool [dt.ButtonCount][dt.FloorCount] bool
 	
 type elevator struct {
-	
+	direction			dt.MoveDirectionType
+	previousDirection	dt.MoveDirectionType
+
+	currentFloor		int
+	floorUp				int
+
+	currentState        dt.MachineStateType
+	previousState		dt.MachineStateType
+
+	orderMatrix			orderMatrixBool
 }
 
 func RunStateMachine(elevatorID int,
-	//Interface towards statehandler
-	driverStateUpdateCh chan<- dt.ElevatorState,
-	acceptedOrderCh <-chan dt.OrderType,
-	completedOrderCh chan<- dt.OrderType,,
-	restartCh <-chan int, 
-	//Interface towards elevio
-	floorSwitchCh <-chan int
-	// stopBtnCh <-chan bool,
-	// obstructionSwitchCh <-chan bool
-	) 
+		//Interface towards statehandler
+		driverStateUpdateCh chan<- dt.ElevatorState,
+		acceptedOrderCh <-chan dt.OrderType,
+		completedOrderCh chan<- dt.OrderType,,
+		restartCh <-chan int, 
+		//Interface towards elevio
+		floorSwitchCh <-chan int,
+		floorIndicatorCh chan<- int,
+		motorDirectionCh chan<- dt.MoveDirectionType,
+		doorOpenCh chan<- bool
+		// setStopCh chan <- bool,
+		// stopBtnCh <-chan bool,
+		// obstructionSwitchCh <-chan bool
+		) 
 {
-	// Local data
-
-
-	//var currentState dt.MachineStateType
-	go listenForAcceptedOrders(acceptedOrderCh)
-
-	//run state machine here
-	for {
-		select {
-		case newAcceptedOrder<-acceptedOrderCh:
-
-		case newFloor <- floorSwitchCh:
-
-		case <- restartCh:
-
-
+		// Initialize the elevators position
+		select{
+		case currentFloor := <- floorSwitchCh:
+				currentState =  ElevatorState_Resting
+				if currentFloor != numFloors{
+					floorUp = currentFloor + 1
+				}
+		default:
+				SetMotorDirection(MD_Down)
+				currentFloor <-ch_floorArrival
+				SetMotorDirection(MD_Stop)
+				if currentFloor != numFloors{
+					floorUp = currentFloor + 1
+				}
+				previousDirection = MD_Down
 		}
-	}
+		currentDirection = MD_Stop
+
+		// Local data
+		var currentElevator elevator
+
+		//run state machine here
+		for {
+				select {
+				case newAcceptedOrder:= <- acceptedOrderCh:
+						newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, currentElevator)
+						currentElevator = newElevator
+				case newFloor:= <- floorSwitchCh:
+						shouldStop, newElevator := updateOnNewFloorArrival(newFloor, currentElevator)
+	
+						floorIndicatorCh <- newFloor
+				case <- restartCh:
+
+
+			}
+		}
 }
+
+
+func updateOnNewAcceptedOrder(order dt.OrderType, oldElevator elevator) {
+		newElevator := oldElevator	
+
+		if oldElevator.currentState != dt.Error {
+				newElevator.orderMatrix[order.Button][order.Floor] = true
+		} 
+}
+
+
 
 func listenForAcceptedOrders(acceptedOrderCh <-chan dt.OrderType) {
 	for {
