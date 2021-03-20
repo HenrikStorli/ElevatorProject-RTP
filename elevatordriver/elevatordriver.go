@@ -64,7 +64,7 @@ func RunStateMachine(elevatorID int,
 						currentElevator = newElevator
 				case newFloor:= <- floorSwitchCh:
 						shouldStop, newElevator := updateOnNewFloorArrival(newFloor, currentElevator)
-	
+						
 						floorIndicatorCh <- newFloor
 				case <- restartCh:
 
@@ -74,12 +74,13 @@ func RunStateMachine(elevatorID int,
 }
 
 
-func updateOnNewAcceptedOrder(order dt.OrderType, oldElevator elevator) {
+func updateOnNewAcceptedOrder(order dt.OrderType, oldElevator elevator) elevator {
 		newElevator := oldElevator	
 
 		if oldElevator.currentState != dt.Error {
 				newElevator.orderMatrix[order.Button][order.Floor] = true
-		} 
+		}
+		return newElevator
 }
 
 
