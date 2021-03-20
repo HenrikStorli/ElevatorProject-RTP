@@ -1,12 +1,13 @@
 package elevio
 
-import "time"
-import "sync"
-import "net"
-import "fmt"
-import dt "../datatypes"
+import (
+	"fmt"
+	"net"
+	"sync"
+	"time"
 
-
+	dt "../../datatypes"
+)
 
 const _pollRate = 20 * time.Millisecond
 
@@ -29,8 +30,6 @@ func Init(addr string, numFloors int) {
 	}
 	_initialized = true
 }
-
-
 
 func SetMotorDirection(dir dt.MoveDirectionType) {
 	_mtx.Lock()
@@ -62,8 +61,6 @@ func SetStopLamp(value bool) {
 	_conn.Write([]byte{5, toByte(value), 0, 0})
 }
 
-
-
 func PollButtons(receiver chan<- dt.OrderType) {
 	prev := make([][3]bool, _numFloors)
 	for {
@@ -72,7 +69,7 @@ func PollButtons(receiver chan<- dt.OrderType) {
 			for b := dt.ButtonType(0); b < 3; b++ {
 				v := getButton(b, f)
 				if v != prev[f][b] && v != false {
-					receiver <- dt.OrderType{f, dt.ButtonType(b)}
+					receiver <- dt.OrderType{Button: dt.ButtonType(b), Floor: f}
 				}
 				prev[f][b] = v
 			}
@@ -115,12 +112,6 @@ func PollObstructionSwitch(receiver chan<- bool) {
 		prev = v
 	}
 }
-
-
-
-
-
-
 
 func getButton(button dt.ButtonType, floor int) bool {
 	_mtx.Lock()

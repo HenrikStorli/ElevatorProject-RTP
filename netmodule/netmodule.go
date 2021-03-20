@@ -14,7 +14,7 @@ import (
 
 type networkPackage struct {
 	SenderID         int
-	NewStates        [dt.ElevatorCount]dt.ElevatorState
+	NewState         dt.ElevatorState
 	NewOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType
 }
 
@@ -40,8 +40,8 @@ const (
 
 //RunNetworkModule is
 func RunNetworkModule(elevatorID int, networkPorts NetworkPorts,
-	outgoingStateCh <-chan [dt.ElevatorCount]dt.ElevatorState,
-	incomingStateCh chan<- [dt.ElevatorCount]dt.ElevatorState,
+	outgoingStateCh <-chan dt.ElevatorState,
+	incomingStateCh chan<- dt.ElevatorState,
 	outgoingOrderCh <-chan [dt.ElevatorCount]dt.OrderMatrixType,
 	incomingOrderCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
 	disconnectingElevatorIDCh chan<- int,
@@ -75,16 +75,16 @@ func initNetworkConnections(elevatorID int, networkPorts NetworkPorts, networkCh
 	go bcast.Receiver(networkPorts.BcastRxPort, networkChannels.ReceiveCh)
 }
 
-func sendNetworkPackage(elevatorID int, networkChannels networkChannelsType, outgoingStateCh <-chan [dt.ElevatorCount]dt.ElevatorState, outgoingOrderCh <-chan [dt.ElevatorCount]dt.OrderMatrixType, resendCount int, resendInterval int) {
+func sendNetworkPackage(elevatorID int, networkChannels networkChannelsType, outgoingStateCh <-chan dt.ElevatorState, outgoingOrderCh <-chan [dt.ElevatorCount]dt.OrderMatrixType, resendCount int, resendInterval int) {
 
 	intervalMillis := time.Duration(resendInterval) * time.Millisecond
 	var nilOrders [dt.ElevatorCount]dt.OrderMatrixType
-	var nilStates [dt.ElevatorCount]dt.ElevatorState
+	var nilState dt.ElevatorState
 	for {
 		select {
-		case newStates := <-outgoingStateCh:
+		case newState := <-outgoingStateCh:
 
-			newPackage := networkPackage{elevatorID, newStates, nilOrders}
+			newPackage := networkPackage{elevatorID, newState, nilOrders}
 
 			for i := 0; i < resendCount; i++ {
 				//Queue the package for sending
@@ -96,7 +96,7 @@ func sendNetworkPackage(elevatorID int, networkChannels networkChannelsType, out
 
 		case newOrders := <-outgoingOrderCh:
 
-			newPackage := networkPackage{elevatorID, nilStates, newOrders}
+			newPackage := networkPackage{elevatorID, nilState, newOrders}
 
 			for i := 0; i < resendCount; i++ {
 				//Queue the package for sending
@@ -111,13 +111,13 @@ func sendNetworkPackage(elevatorID int, networkChannels networkChannelsType, out
 }
 
 func receiveNetworkPackage(elevatorID int, networkChannels networkChannelsType,
-	incomingStateCh chan<- [dt.ElevatorCount]dt.ElevatorState,
+	incomingStateCh chan<- dt.ElevatorState,
 	incomingOrderCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
 	discardOwnPackages bool,
 	discardRepeatingPackages bool) {
 
 	var nilOrders [dt.ElevatorCount]dt.OrderMatrixType
-	var nilStates [dt.ElevatorCount]dt.ElevatorState
+	var nilState dt.ElevatorState
 
 	var lastPackageReceived networkPackage
 
@@ -135,8 +135,8 @@ func receiveNetworkPackage(elevatorID int, networkChannels networkChannelsType,
 				continue
 			}
 
-			if newPackage.NewStates != nilStates {
-				incomingStateCh <- newPackage.NewStates
+			if newPackage.NewState != nilState {
+				incomingStateCh <- newPackage.NewState
 			}
 			if newPackage.NewOrderMatrices != nilOrders {
 				incomingOrderCh <- newPackage.NewOrderMatrices
