@@ -17,22 +17,26 @@ type elevatorType struct {
 	previousState		dt.MachineStateType
 
 	orderMatrix			orderMatrixBool
+
+	doorObstructed		bool
 }
 
 func RunStateMachine(elevatorID int,
-		//Interface towards statehandler
+		//To statehandler
 		driverStateUpdateCh chan<- dt.ElevatorState,
+		completedOrderCh chan<- dt.OrderType,
+		//From statehandler
 		acceptedOrderCh <-chan dt.OrderType,
-		completedOrderCh chan<- dt.OrderType,,
 		restartCh <-chan int, 
-		//Interface towards elevio
+		//From elevio
 		floorSwitchCh <-chan int,
+		stopBtnCh <-chan bool,
+		obstructionSwitchCh <-chan bool,
+		//To elevio
 		floorIndicatorCh chan<- int,
 		motorDirectionCh chan<- dt.MoveDirectionType,
 		doorOpenCh chan<- bool,
-		// setStopCh chan <- bool,
-		// stopBtnCh <-chan bool,
-		// obstructionSwitchCh <-chan bool
+		setStopCh chan<- bool,		
 		) 
 {
 		// Local data
@@ -66,6 +70,8 @@ func RunStateMachine(elevatorID int,
 				case newAcceptedOrder:= <- acceptedOrderCh:
 						newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, currentElevator)
 						currentElevator = newElevator
+						
+						
 
 				case newFloor:= <- floorSwitchCh:
 						shouldStop, newElevator := updateOnNewFloorArrival(newFloor, currentElevator)
@@ -81,7 +87,17 @@ func RunStateMachine(elevatorID int,
 
 				case <- restartCh:
 
+				case <- doorTimerCh:
+
+				case currentElevator.doorObstructed <- obstructionSwitchCh:
+
+				case <- stopBtnCh:
+
+
 			}
+
+			// Send updated elevator to statehandler
+
 		}
 }
 
