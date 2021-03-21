@@ -65,7 +65,14 @@ func clearOrdersOnFloor(floor int){
 
 // -----------------------------------------------------
 
-func anyOrdersAtCurrentFloor(elevator) bool {
+func clearOrdersAtCurrentFloor(elevator elevatorType) elevatorType {
+    for btnType := 0; btnType < 3; ++ {
+        elevator.orderMatrix[btnType][elevator.currentFloor - 1] = false
+    }
+    return elevator
+}
+
+func anyOrdersAtCurrentFloor(elevator elevatorType) bool {
     for btnType := 0; btnType < 3; ++ {
         if elevator.orderMatrix[btnType][elevator.currentFloor] {
             return true
