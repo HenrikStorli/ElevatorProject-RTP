@@ -4,6 +4,11 @@ import (
 	dt "../datatypes"
 )
 
+const (
+	OPEN_DOOR 	= true
+	CLOSE_DOOR 	= false
+)
+
 type orderMatrixBool [dt.ButtonCount][dt.FloorCount] bool
 	
 type elevatorType struct {
@@ -13,7 +18,7 @@ type elevatorType struct {
 	currentFloor		int
 	floorUp				int
 
-	currentState        dt.MachineStateType
+	state        		dt.MachineStateType
 	previousState		dt.MachineStateType
 
 	orderMatrix			orderMatrixBool
@@ -70,8 +75,14 @@ func RunStateMachine(elevatorID int,
 				case newAcceptedOrder:= <- acceptedOrderCh:
 						newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, currentElevator)
 						currentElevator = newElevator
-						
-						
+
+						if nextState == dt.Moving {
+								motorDirectionCh <- currentElevator.direction
+
+						} else if nextState == dt.DoorOpen {
+								go startDoorTimer(doorTimerCh)
+								doorOpenCh <- OPEN_DOOR
+						}
 
 				case newFloor:= <- floorSwitchCh:
 						shouldStop, newElevator := updateOnNewFloorArrival(newFloor, currentElevator)
@@ -81,13 +92,21 @@ func RunStateMachine(elevatorID int,
 						floorIndicatorCh <- newFloor
 						
 						if shouldStop {
-								doorOpenCh <- true
+								doorOpenCh <- OPEN_DOOR
 								go startDoorTimer(doorTimerCh)
+								//Send floorNumber to statehandler
 						}
 
 				case <- restartCh:
 
 				case <- doorTimerCh:
+						if currentElevator.doorObstructed {
+								go startDoorTimer(doorTimerCh)
+						
+						} else {
+								doorOpenCh <- CLOSE_DOOR
+								newElevator := updateOnDoorClosing(currentElevator)
+						}
 
 				case currentElevator.doorObstructed <- obstructionSwitchCh:
 
@@ -102,65 +121,5 @@ func RunStateMachine(elevatorID int,
 }
 
 
-func updateOnNewAcceptedOrder(order dt.OrderType, oldElevator elevatorType) elevatorType {
-		newElevator := oldElevator	
 
-		if oldElevator.currentState != dt.Error {
-				newElevator.orderMatrix[order.Button][order.Floor - 1] = true
-		}
-		return newElevator
-}
-
-func updateOnNewFloorArrival(newFloor int, oldElevator elevatorType) (bool, elevatorType) {
-
-	shouldStop := false
-	newElevator := oldElevator
-
-	newElevator.currentFloor = newFloor
-
-	switch (oldElevator.state) {
-	case dt.Moving:
-			if ElevatorShouldStop(newElevator) {
-					newElevator := clearOrdersAtFloor(newElevator)
-					newElevator.direction = dt.MovingStopped
-					newElevator.state = dt.DoorOpen
-					shouldStop = true
-			}
-			return shouldStop, newElevator
-
-	case dt:Error:
-		// Test for reinitialize-criteria
-	}
-	
-	return shouldStop, newElevator
-}
-
-
-func ElevatorShouldStop(elevator elevatorType) bool {
-		if cabOrdersAtCurrentFloor(elevator) {
-				return true
-
-		} else if ordersInTravelingDirectionAtCurrentFloor(elevator) {
-				return true 
-
-		} else if anyOrdersAtCurrentFloor(elevator) {
-				if elevator.Direction == dt.MovingUp || !anyOrdersAbove(elevator){
-						return true
-
-				} else if elevator.Direction == dt.MovingDown || !anyOrdersBelow(elevator) {
-						return true
-				}
-		}
-		return false 
-		
-}
  
-
-func listenForAcceptedOrders(acceptedOrderCh <-chan dt.OrderType) {
-	for {
-		select {
-		case <-acceptedOrderCh:
-
-		}
-	}
-}

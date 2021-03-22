@@ -1,49 +1,10 @@
 package elevatordriver
 
-func updateOrder(orderMatrix orderMatrixBool, order dt.OrderType, status bool){
-    orderMatrix[order.Button][order.Floor] = status
-}
-
 func anyOrders() bool {
   for floor: = 0; floor < _numFloors; ++{
     for orderType := 0; orderType < 3; ++ {
       if orderButtonMatrix[orderType][floor] == 1
         return true
-    }
-  }
-  return false
-}
-
-func anyOrdersAbove(currentfloor int) bool {
-  if currentFloor == _numFloors - 1{
-    return false
-  }
-  for floor:= currentFloor; floor < _numFloors; ++{
-    for orderType:= 0; orderType < 3; ++{
-      if orderButtonMatrix[orderType][floor] == 1
-        return true
-    }
-  }
-  return false
-}
-
-func anyOrdersBelow(currentfloor int) bool {
-  if currentFloor == 1{
-    return false
-  }
-  for floor:= currentFloor - 2; floor > -1; --{
-    for orderType:= 0; orderType < 3; ++{
-      if orderButtonMatrix[orderType][floor] == 1
-        return true
-    }
-  }
-  return false
-}
-
-func anyOrdersAtFloor(floor int) bool {
-  for orderType:= 0; orderType < 3; ++{
-    if orderButtonMatrix[orderType][floor - 1] == 1{
-      return true
     }
   }
   return false
@@ -64,6 +25,19 @@ func clearOrdersOnFloor(floor int){
 }
 
 // -----------------------------------------------------
+
+const (
+  ACTIVE    = true
+  INACTIVE  = false
+)
+
+
+
+func updateOrder(elevator elevatorType, order dt.OrderType, status bool) elevatorType {
+    elevator.orderMatrix[order.Button][order.Floor - 1] = status
+
+    return elevator
+}
 
 func clearOrdersAtCurrentFloor(elevator elevatorType) elevatorType {
     for btnType := 0; btnType < 3; ++ {
@@ -93,7 +67,6 @@ func anyOrdersAbove(elevator elevatorType) bool {
 }
 
 func anyOrdersBelow(elevator elevatorType) bool {
-
     for floor:= elevator.currentFloor - 1; floor > 0; --{
         for btnType:= 0; btnType < 3; ++{
             if elevator.orderMatrix[btnType][floor] {

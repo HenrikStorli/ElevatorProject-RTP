@@ -54,6 +54,7 @@ type ElevatorState struct {
 }
 
 const (
+	None MachineStateType = -1
 	Init MachineStateType = iota
 	Idle 
 	Moving 
