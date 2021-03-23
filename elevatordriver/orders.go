@@ -1,39 +1,11 @@
 package elevatordriver
 
-func anyOrders() bool {
-  for floor: = 0; floor < _numFloors; ++{
-    for orderType := 0; orderType < 3; ++ {
-      if orderButtonMatrix[orderType][floor] == 1
-        return true
-    }
-  }
-  return false
-}
-
-func anyOrdersOfType(orderType ButtonType) bool{
-  for floor:= 0; floor < _numFloors; ++{
-    if orderButtonMatrix[orderType][floor] == 1
-    return true
-  }
-  return false
-}
-
-func clearOrdersOnFloor(floor int){
-  for orderType:= 0; orderType < 3; ++{
-    updateOrder(ButtonEvent{floor, orderType}, 0)
-  }
-}
-
-// -----------------------------------------------------
-
 const (
   ACTIVE    = true
   INACTIVE  = false
 )
 
-
-
-func updateOrder(elevator elevatorType, order dt.OrderType, status bool) elevatorType {
+func updateOrder(elevator elevatorType, order dt.OrderType, status bool) elevatorType { // Endre returtype til orderMatrix
     elevator.orderMatrix[order.Button][order.Floor - 1] = status
 
     return elevator

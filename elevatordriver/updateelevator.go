@@ -2,7 +2,7 @@ package elevatordriver
 
 func updateOnNewAcceptedOrder(order dt.OrderType, elevator elevatorType) (dt.MachineStateType, elevatorType) {
 		
-		nextState := dt.None
+		nextState := elevator.state
 
 		switch(elevator.state){
 		case dt.Idle:
@@ -11,10 +11,10 @@ func updateOnNewAcceptedOrder(order dt.OrderType, elevator elevatorType) (dt.Mac
 					elevator.state = nextState
 			
 			} else {
-					nextState := dt.moving
+					nextState := dt.Moving
 					elevator.state = nextState
 
-					elevator = updateOrder(elevator, order, ACTIVE)
+					elevator.o = updateOrder(elevator, order, ACTIVE) // Endre returtype til orderMatrix
 
 					elevator.direction = chooseDirectionFromIdle(elevator, order)
 			}

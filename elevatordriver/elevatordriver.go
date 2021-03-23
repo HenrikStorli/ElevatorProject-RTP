@@ -48,18 +48,18 @@ func RunStateMachine(elevatorID int,
 		var currentElevator elevatorType
 
 		//Internal channels
-		dootTimerCh := make(chan bool)
+		doorTimerCh := make(chan bool)
 
 		// Initialize the elevators position
 		select{
-		case currentFloor := <- floorSwitchCh:
+		case currentFloor := <- floorIndicatorCh:
 				currentState =  ElevatorState_Resting
 				if currentFloor != numFloors{
 					floorUp = currentFloor + 1
 				}
 		default:
 				SetMotorDirection(MD_Down)
-				currentFloor <-ch_floorArrival
+				currentFloor <-floorIndicatorCh
 				SetMotorDirection(MD_Stop)
 				if currentFloor != numFloors{
 					floorUp = currentFloor + 1
@@ -74,15 +74,20 @@ func RunStateMachine(elevatorID int,
 				select {
 				case newAcceptedOrder:= <- acceptedOrderCh:
 						newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, currentElevator)
-						currentElevator = newElevator
 
-						if nextState == dt.Moving {
-								motorDirectionCh <- currentElevator.direction
+						if currentElevator.state != newElevator.state {
+								if nextState == dt.Moving  {
+										motorDirectionCh <- currentElevator.direction
 
-						} else if nextState == dt.DoorOpen {
-								go startDoorTimer(doorTimerCh)
-								doorOpenCh <- OPEN_DOOR
+								} else if nextState == dt.DoorOpen {
+										go startDoorTimer(doorTimerCh)
+										doorOpenCh <- OPEN_DOOR
+								}
+						} else {
+
 						}
+
+						currentElevator = newElevator
 
 				case newFloor:= <- floorSwitchCh:
 						shouldStop, newElevator := updateOnNewFloorArrival(newFloor, currentElevator)
@@ -114,7 +119,6 @@ func RunStateMachine(elevatorID int,
 
 
 			}
-
 			// Send updated elevator to statehandler
 
 		}
