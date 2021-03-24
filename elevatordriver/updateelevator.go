@@ -1,5 +1,9 @@
 package elevatordriver
 
+import (
+	dt "../datatypes"
+)
+
 func updateOnNewAcceptedOrder(order dt.OrderType, elevator elevatorType)  elevatorType {
 
 		switch(elevator.state){
@@ -11,7 +15,7 @@ func updateOnNewAcceptedOrder(order dt.OrderType, elevator elevatorType)  elevat
 						nextState := dt.Moving
 						elevator.state = nextState
 						elevator.orderMatrix = updateOrder(elevator, order, ACTIVE)
-						elevator.direction = chooseDirection(elevator)
+						elevator.direction = ChooseDirection(elevator)
 				}
 		case dt.Moving:
 				elevator.orderMatrix = updateOrder(elevator, order, ACTIVE)
@@ -24,6 +28,7 @@ func updateOnNewAcceptedOrder(order dt.OrderType, elevator elevatorType)  elevat
 		default:
 		
 		}
+		return elevator
 }
 
 func updateOnNewFloorArrival(newFloor int, elevator elevatorType)  elevatorType {
@@ -37,10 +42,9 @@ func updateOnNewFloorArrival(newFloor int, elevator elevatorType)  elevatorType 
 						//elevator.directionPriority = calculatedirectionPriority(elevator)
 						elevator.state = dt.DoorOpen
 				}
-		case dt:Error:
+		//case dt:Error:
 			// Test for reinitialize-criteria
 		default:
-
 		}
 
 		return elevator
@@ -49,7 +53,7 @@ func updateOnNewFloorArrival(newFloor int, elevator elevatorType)  elevatorType 
 func updateOnDoorClosing(elevator elevatorType) elevatorType {
 		switch(elevator.state){
 		case dt.DoorOpen:
-				elevator.direction = chooseDirection(elevator)
+				elevator.direction = ChooseDirection(elevator)
 				
 				if elevator.direction == dt.MovingStopped {
 						elevator.state = dt.Idle
@@ -58,6 +62,7 @@ func updateOnDoorClosing(elevator elevatorType) elevatorType {
 				}
 		default:
 		}	
+		return elevator
 }
 
 func ElevatorShouldStop(elevator elevatorType) bool {
@@ -68,10 +73,10 @@ func ElevatorShouldStop(elevator elevatorType) bool {
 				return true 
 
 		} else if anyOrdersAtCurrentFloor(elevator) {
-				if elevator.Direction == dt.MovingUp || !anyOrdersAbove(elevator){
+				if elevator.direction == dt.MovingUp || !anyOrdersAbove(elevator){
 						return true
 
-				} else if elevator.Direction == dt.MovingDown || !anyOrdersBelow(elevator) {
+				} else if elevator.direction == dt.MovingDown || !anyOrdersBelow(elevator) {
 						return true
 				}
 		}
@@ -80,7 +85,7 @@ func ElevatorShouldStop(elevator elevatorType) bool {
 
 func ChooseDirection(elevator elevatorType) dt.MoveDirectionType {
 		switch(elevator.direction){
-		case dt:MovingUp:
+		case dt.MovingUp:
 				if anyOrdersAbove(elevator) {
 						return dt.MovingUp
 				} else if anyOrdersBelow(elevator) {
@@ -88,7 +93,7 @@ func ChooseDirection(elevator elevatorType) dt.MoveDirectionType {
 				} else {
 						return dt.MovingStopped
 				}
-		case dt:MovingDown:
+		case dt.MovingDown:
 				if anyOrdersBelow(elevator) {
 						return dt.MovingDown
 				} else if anyOrdersAbove(elevator) {
@@ -105,6 +110,6 @@ func ChooseDirection(elevator elevatorType) dt.MoveDirectionType {
 					return dt.MovingStopped
 				}
 		default:
-				return dt:MovingStopped
+				return dt.MovingStopped
 		}	
 }

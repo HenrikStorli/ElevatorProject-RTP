@@ -1,5 +1,9 @@
 package elevatordriver
 
+import (
+	dt "../datatypes"
+)
+
 const (
   ACTIVE    = true
   INACTIVE  = false
@@ -11,15 +15,15 @@ func updateOrder(elevator elevatorType, order dt.OrderType, status bool) orderMa
 }
 
 func clearOrdersAtCurrentFloor(elevator elevatorType) orderMatrixBool {    
-        for btnType := 0; btnType < dt.ButtonCount; ++ {
+        for btnType := 0; btnType < dt.ButtonCount; btnType++ {
                 elevator.orderMatrix[btnType][elevator.currentFloor] = INACTIVE
         }
         return elevator.orderMatrix
 }
 
-func anyOrders(elevator) bool {
-        for floor := 0; floor < dt.FloorCount; ++ {
-                for btnType := 0; btnType < dt.ButtonCount; ++ {
+func anyOrders(elevator elevatorType) bool {
+        for floor := 0; floor < dt.FloorCount; floor++ {
+                for btnType := 0; btnType < dt.ButtonCount; btnType++ {
                         if elevator.orderMatrix[btnType][floor] {
                                 return true
                         }
@@ -29,16 +33,17 @@ func anyOrders(elevator) bool {
 }
 
 func anyOrdersAtCurrentFloor(elevator elevatorType) bool {
-        for btnType := 0; btnType < dt.ButtonCount; ++ {
+        for btnType := 0; btnType < dt.ButtonCount; btnType++ {
                 if elevator.orderMatrix[btnType][elevator.currentFloor] {
                         return true
                 }
         }
+        return false
 }
 
 func anyOrdersAbove(elevator elevatorType) bool {                   
-        for floor := elevator.currentFloor + 1; floor < dt.FloorCount; ++ {      
-                for btnType := 0; btnType < dt.ButtonCount; ++ {
+        for floor := elevator.currentFloor + 1; floor < dt.FloorCount; floor++ {      
+                for btnType := 0; btnType < dt.ButtonCount; btnType++ {
                         if elevator.orderMatrix[btnType][floor] {
                                 return true
                         }
@@ -48,8 +53,8 @@ func anyOrdersAbove(elevator elevatorType) bool {
 }
 
 func anyOrdersBelow(elevator elevatorType) bool {              
-        for floor:= elevator.currentFloor - 1; floor > -1; -- {
-                for btnType:= 0; btnType < dt.ButtonCount; ++ {
+        for floor := elevator.currentFloor - 1; floor > -1; floor-- {
+                for btnType := 0; btnType < dt.ButtonCount; btnType++ {
                         if elevator.orderMatrix[btnType][floor] {
                                 return true
                         }
@@ -68,12 +73,12 @@ func anyCabOrdersAtCurrentFloor(elevator elevatorType) bool {
 func anyOrdersInTravelingDirectionAtCurrentFloor(elevator elevatorType) bool {
         switch(elevator.direction){
         case dt.MovingDown:
-                if elevator.orderMatrix[BtnHallDown][elevator.currentFloor] {
+                if elevator.orderMatrix[dt.BtnHallDown][elevator.currentFloor] {
                         return true
                 }
 
         case dt.MovingUp:
-                if elevator.orderMatrix[BtnHallUp][elevator.currentFloor] {
+                if elevator.orderMatrix[dt.BtnHallUp][elevator.currentFloor] {
                         return true
                 }
         }

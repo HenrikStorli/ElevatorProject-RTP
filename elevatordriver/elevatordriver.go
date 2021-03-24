@@ -9,7 +9,7 @@ const (
 	CLOSE_DOOR 	= false
 )
 
-type directionPriorityType
+type directionPriorityType int
 
 const (
 	PRIORITY_DOWN	directionPriorityType = -1
@@ -43,25 +43,24 @@ func RunStateMachine(elevatorID int,
 		floorIndicatorCh chan<- int,
 		motorDirectionCh chan<- dt.MoveDirectionType,
 		doorOpenCh chan<- bool,
-		setStopCh chan<- bool,		
-		) 
-{
+		setStopCh chan<- bool) {
 		// Local data
 		var elevator elevatorType
 
 		//Internal channels
 		doorTimerCh := make(chan bool)
-
+		
 		// Initialize the elevators position
 		select{
-		case newFloor := <- floorIndicatorCh:
+		case newFloor := <- floorSwitchCh:
+				elevator.currentFloor = newFloor
 		default:
 				motorDirectionCh <- dt.MovingDown
-				newFloor := <- floorIndicatorCh
+				newFloor := <- floorSwitchCh
+				elevator.currentFloor = newFloor
 				motorDirectionCh <- dt.MovingStopped
 		}
 		elevator.direction = dt.MovingStopped
-		elevator.currentFloor = newFloor
 		elevator.state = dt.Idle
 		
 		// Run state machine
@@ -115,12 +114,12 @@ func RunStateMachine(elevatorID int,
 
 				case <- restartCh:
 
-				case elevator.doorObstructed <- obstructionSwitchCh:
+				case elevator.doorObstructed = <- obstructionSwitchCh:
 
 				case <- stopBtnCh:
 			}
 			// Send updated elevator to statehandler
-			driverStateUpdateCh <- elevator // This type does not match the type of the channel
+			//driverStateUpdateCh <- elevator // This type does not match the type of the channel
 		}
 }
 
