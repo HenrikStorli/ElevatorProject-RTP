@@ -9,11 +9,20 @@ const (
 	CLOSE_DOOR 	= false
 )
 
+type directionPriorityType
+
+const (
+	PRIORITY_DOWN	directionPriorityType = -1
+	PRIORITY_NONE                         = 0
+	PRIORITY_UP                           = 1
+)
+
 type orderMatrixBool [dt.ButtonCount][dt.FloorCount] bool
 	
 type elevatorType struct {
 	direction			dt.MoveDirectionType
-	priorityDirection	dt.MoveDirectionType
+	previousDirection	dt.MoveDirectionType
+	//directionPriority	directionPriorityType
 	state        		dt.MachineStateType
 	orderMatrix			orderMatrixBool
 	currentFloor		int

@@ -31,8 +31,11 @@ func updateOnNewFloorArrival(newFloor int, elevator elevatorType)  elevatorType 
 		case dt.Moving:
 				if ElevatorShouldStop(elevator) {
 						elevator.orderMatrix = clearOrdersAtCurrentFloor(elevator)
-						elevator.priorityDirection = elevator.direction
-						elevator.direction = dt.MovingStopped
+						//elevator.directionPriority = calculatedirectionPriority(elevator)
+
+						//elevator.previousDirection = elevator.direction
+						//elevator.direction = dt.MovingStopped 
+						
 						elevator.state = dt.DoorOpen
 				}
 		case dt:Error:
@@ -55,7 +58,6 @@ func updateOnDoorClosing(elevator elevatorType) elevatorType {
 				}
 		}
 }
-
 
 func ElevatorShouldStop(elevator elevatorType) bool {
 		if anyCabOrdersAtCurrentFloor(elevator) {
@@ -99,25 +101,26 @@ func chooseDirectionFromDoorOpen(elevator elevatorType) dt.MoveDirectionType {
 		} else if elevator.currentFloor == 0 && anyOrdersAbove(elevator) {
 			return dt.MovingUp
 			
-		} else if {
-			
-		} else if {
-			
-		} else if {
-			
-		} else if {
-			
+		}
+
+		switch(elevator.direction){
+		case dt:MovingUp:
+				if anyOrdersAbove(elevator) {
+					return 
+				}
 		}
 
 
-		if elevator.currentFloor == dt.FloorCount && anyOrdersBelow(elevator) {
-				return dt.MovingDown
 
-		} else if elevator.currentFloor == 0 && anyOrdersAbove(elevator) {
-				return dt.MovingUp
-		
-		} else if 
 }
+
+func calculatedirectionPriority(elevator elevatorType) directionPriorityType{
+		switch(elevator.direction){
+		case dt.MovingUp:
+				if !anyOrdersBelow(elevator) && 
+		}
+}
+
 
 Software_state elevator_movement_from_idle(int current_floor, HardwareMovement previous_direction){
 
@@ -150,4 +153,18 @@ Software_state elevator_movement_from_idle(int current_floor, HardwareMovement p
     }
     return Software_state_waiting;
 }
+
+
+Software_state elevator_movement_from_floor(int order_floor_is,int current_floor_is){
+	if(order_floor_is > current_floor_is){
+	  return Software_state_moving_up;
+  
+	}else if(order_floor_is < current_floor_is){
+	  return Software_state_moving_down;
+  
+	}else {
+	  priority = PRIORITY_RESET;
+	  return Software_state_idle;
+	}
+  }
 
