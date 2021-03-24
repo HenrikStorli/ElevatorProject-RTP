@@ -11,7 +11,7 @@ func updateOnNewAcceptedOrder(order dt.OrderType, elevator elevatorType)  elevat
 						nextState := dt.Moving
 						elevator.state = nextState
 						elevator.orderMatrix = updateOrder(elevator, order, ACTIVE)
-						elevator.direction = chooseDirectionFromIdle(elevator, order)
+						elevator.direction = chooseDirection(elevator)
 				}
 		case dt.Moving:
 				elevator.orderMatrix = updateOrder(elevator, order, ACTIVE)
@@ -32,10 +32,6 @@ func updateOnNewFloorArrival(newFloor int, elevator elevatorType)  elevatorType 
 				if ElevatorShouldStop(elevator) {
 						elevator.orderMatrix = clearOrdersAtCurrentFloor(elevator)
 						//elevator.directionPriority = calculatedirectionPriority(elevator)
-
-						//elevator.previousDirection = elevator.direction
-						//elevator.direction = dt.MovingStopped 
-						
 						elevator.state = dt.DoorOpen
 				}
 		case dt:Error:
@@ -48,8 +44,7 @@ func updateOnNewFloorArrival(newFloor int, elevator elevatorType)  elevatorType 
 func updateOnDoorClosing(elevator elevatorType) elevatorType {
 		switch(elevator.state){
 		case dt.DoorOpen:
-
-				elevator.direction = chooseDirectionFromDoorOpen(elevator)
+				elevator.direction = chooseDirection(elevator)
 				
 				if elevator.direction == dt.MovingStopped {
 						elevator.state = dt.Idle
@@ -91,80 +86,53 @@ func chooseDirectionFromIdle(elevator elevatorType, order dt.OrderType) dt.MoveD
 
 
 func chooseDirectionFromDoorOpen(elevator elevatorType) dt.MoveDirectionType {
-
-		if !anyOrders(elevator){
-				return dt.MovingStopped
-		} 
-		else if elevator.currentElevator == dt.FloorCount - 1 && anyOrdersBelow(elevator){
-				return dt.MovingDown
-
-		} else if elevator.currentFloor == 0 && anyOrdersAbove(elevator) {
-			return dt.MovingUp
-			
-		}
-
 		switch(elevator.direction){
 		case dt:MovingUp:
 				if anyOrdersAbove(elevator) {
-					return 
+						return dt.MovingUp
+				} else if anyOrdersBelow(elevator) {
+						return dt.MovingDown
 				}
-		}
-
-
-
+		case dt:MovingDown:
+		case dt.MovingStopped:
+				if anyOrdersBelow(elevator) {
+						return dt.MovingDown
+				} else if anyOrdersAbove(elevator) {
+						return dt.MovingUp
+				}
+		default:
+				return dt:MovingStopped
+		}		
 }
 
-func calculatedirectionPriority(elevator elevatorType) directionPriorityType{
+
+func ChooseDirection(elevator elevatorType) dt.MoveDirectionType {
 		switch(elevator.direction){
-		case dt.MovingUp:
-				if !anyOrdersBelow(elevator) && 
-		}
+		case dt:MovingUp:
+				if anyOrdersAbove(elevator) {
+						return dt.MovingUp
+				} else if anyOrdersBelow(elevator) {
+						return dt.MovingDown
+				} else {
+						return dt.MovingStopped
+				}
+		case dt:MovingDown:
+				if anyOrdersBelow(elevator) {
+						return dt.MovingDown
+				} else if anyOrdersAbove(elevator) {
+						return dt.MovingUp
+				} else {
+						return dt.MovingStopped
+				}
+		case dt.MovingStopped:
+				if anyOrdersBelow(elevator) {
+						return dt.MovingDown
+				} else if anyOrdersAbove(elevator) {
+						return dt.MovingUp
+				} else {
+					return dt.MovingStopped
+				}
+		default:
+				return dt:MovingStopped
+		}	
 }
-
-
-Software_state elevator_movement_from_idle(int current_floor, HardwareMovement previous_direction){
-
-    if(queue_check_orders_waiting() == NO_ORDERS){
-      return Software_state_waiting;
-    }
-    else if((current_floor == (HARDWARE_NUMBER_OF_FLOORS - 1)) && queue_check_order_below(current_floor)){
-      return Software_state_moving_down;
-    } 
-    else if((current_floor == 0) && queue_check_order_above(current_floor)){
-      return Software_state_moving_up;
-    } 
-    else if((priority == PRIORITY_DOWN) && queue_check_order_below(current_floor)){
-      return Software_state_moving_down;
-    }
-    else if((priority == PRIORITY_UP) && queue_check_order_above(current_floor)){
-      return Software_state_moving_up;
-    } 
-    else if(((previous_direction == HARDWARE_MOVEMENT_UP) && queue_check_order_above(current_floor))){
-      return Software_state_moving_up;
-    }
-    else if((previous_direction == HARDWARE_MOVEMENT_DOWN) && queue_check_order_below(current_floor)){
-      return Software_state_moving_down;
-    }
-    else if ((previous_direction == HARDWARE_MOVEMENT_UP) && queue_check_order_below(current_floor)){
-      return Software_state_moving_down;
-    }
-    else if ((previous_direction == HARDWARE_MOVEMENT_DOWN) && queue_check_order_above(current_floor)){
-      return Software_state_moving_up;
-    }
-    return Software_state_waiting;
-}
-
-
-Software_state elevator_movement_from_floor(int order_floor_is,int current_floor_is){
-	if(order_floor_is > current_floor_is){
-	  return Software_state_moving_up;
-  
-	}else if(order_floor_is < current_floor_is){
-	  return Software_state_moving_down;
-  
-	}else {
-	  priority = PRIORITY_RESET;
-	  return Software_state_idle;
-	}
-  }
-

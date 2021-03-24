@@ -21,7 +21,6 @@ type orderMatrixBool [dt.ButtonCount][dt.FloorCount] bool
 	
 type elevatorType struct {
 	direction			dt.MoveDirectionType
-	previousDirection	dt.MoveDirectionType
 	//directionPriority	directionPriorityType
 	state        		dt.MachineStateType
 	orderMatrix			orderMatrixBool
@@ -102,11 +101,11 @@ func RunStateMachine(elevatorID int,
 						
 						floorIndicatorCh <- newFloor
 						
-						if newElevator.direction == dt.MovingStopped {
+						if newElevator.state == dt.DoorOpen {
 								motorDirectionCh <- dt.MovingStopped
 								doorOpenCh <- OPEN_DOOR
 								go startDoorTimer(doorTimerCh)
-								completedOrdersCh <- newElevator.currentFloor
+								completedOrdersCh <- newFloor
 						}
 
 						currentElevator = newElevator
