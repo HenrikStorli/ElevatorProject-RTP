@@ -47,37 +47,30 @@ func RunStateMachine(elevatorID int,
 		) 
 {
 		// Local data
-		var currentElevator elevatorType
+		var elevator elevatorType
 
 		//Internal channels
 		doorTimerCh := make(chan bool)
 
 		// Initialize the elevators position
 		select{
-		case currentFloor := <- floorIndicatorCh:
-				currentState =  ElevatorState_Resting
-				if currentFloor != numFloors{
-					floorUp = currentFloor + 1
-				}
+		case newFloor := <- floorIndicatorCh:
 		default:
-				SetMotorDirection(MD_Down)
-				currentFloor <-floorIndicatorCh
-				SetMotorDirection(MD_Stop)
-				if currentFloor != numFloors{
-					floorUp = currentFloor + 1
-				}
-				previousDirection = MD_Down
+				motorDirectionCh <- dt.MovingDown
+				newFloor := <- floorIndicatorCh
+				motorDirectionCh <- dt.MovingStopped
 		}
-		currentDirection = MD_Stop
-
-
-		//run state machine here
+		elevator.direction = dt.MovingStopped
+		elevator.currentFloor = newFloor
+		elevator.state = dt.Idle
+		
+		// Run state machine
 		for {
 				select {
 				case newAcceptedOrder:= <- acceptedOrderCh:
-						newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, currentElevator)
+						newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator)
 
-						if currentElevator.state != newElevator.state {
+						if elevator.state != newElevator.state {
 								if newElevator.state == dt.Moving  {
 										motorDirectionCh <- newElevator.direction
 
@@ -93,11 +86,10 @@ func RunStateMachine(elevatorID int,
 								}
 						}
 
-						currentElevator = newElevator
+						elevator = newElevator
 
 				case newFloor:= <- floorSwitchCh:
-
-						newElevator := updateOnNewFloorArrival(newFloor, currentElevator)
+						newElevator := updateOnNewFloorArrival(newFloor, elevator)
 						
 						floorIndicatorCh <- newFloor
 						
@@ -108,29 +100,27 @@ func RunStateMachine(elevatorID int,
 								completedOrdersCh <- newFloor
 						}
 
-						currentElevator = newElevator
-
-				case <- restartCh:
+						elevator = newElevator
 
 				case <- doorTimerCh:
-						if currentElevator.doorObstructed {
+						if elevator.doorObstructed {
 								go startDoorTimer(doorTimerCh)
 						
 						} else {
 								doorOpenCh <- CLOSE_DOOR
-								newElevator := updateOnDoorClosing(currentElevator)
+								newElevator := updateOnDoorClosing(elevator)
 
-								currentElevator = newElevator
+								elevator = newElevator
 						}
 
-				case currentElevator.doorObstructed <- obstructionSwitchCh:
+				case <- restartCh:
+
+				case elevator.doorObstructed <- obstructionSwitchCh:
 
 				case <- stopBtnCh:
-
-
 			}
 			// Send updated elevator to statehandler
-
+			driverStateUpdateCh <- elevator // This type does not match the type of the channel
 		}
 }
 
