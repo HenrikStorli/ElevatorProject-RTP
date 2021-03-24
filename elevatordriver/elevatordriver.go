@@ -13,23 +13,17 @@ type orderMatrixBool [dt.ButtonCount][dt.FloorCount] bool
 	
 type elevatorType struct {
 	direction			dt.MoveDirectionType
-	previousDirection	dt.MoveDirectionType
-
-	currentFloor		int
-	floorUp				int
-
+	priorityDirection	dt.MoveDirectionType
 	state        		dt.MachineStateType
-	previousState		dt.MachineStateType
-
 	orderMatrix			orderMatrixBool
-
+	currentFloor		int
 	doorObstructed		bool
 }
 
 func RunStateMachine(elevatorID int,
 		//To statehandler
 		driverStateUpdateCh chan<- dt.ElevatorState,
-		completedOrderCh chan<- dt.OrderType,
+		completedOrdersCh chan<- int,
 		//From statehandler
 		acceptedOrderCh <-chan dt.OrderType,
 		restartCh <-chan int, 
@@ -76,31 +70,37 @@ func RunStateMachine(elevatorID int,
 						newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, currentElevator)
 
 						if currentElevator.state != newElevator.state {
-								if nextState == dt.Moving  {
-										motorDirectionCh <- currentElevator.direction
+								if newElevator.state == dt.Moving  {
+										motorDirectionCh <- newElevator.direction
 
-								} else if nextState == dt.DoorOpen {
+								} else if newElevator.state == dt.DoorOpen {
 										go startDoorTimer(doorTimerCh)
 										doorOpenCh <- OPEN_DOOR
+										completedOrdersCh <- newElevator.currentFloor
 								}
-						} else {
 
+						} else {
+								if newElevator.state == dt.DoorOpen {
+										completedOrdersCh <- newElevator.currentFloor
+								}
 						}
 
 						currentElevator = newElevator
 
 				case newFloor:= <- floorSwitchCh:
-						shouldStop, newElevator := updateOnNewFloorArrival(newFloor, currentElevator)
-						currentElevator = newElevator
 
-						motorDirectionCh <- currentElevator.direction
+						newElevator := updateOnNewFloorArrival(newFloor, currentElevator)
+						
 						floorIndicatorCh <- newFloor
 						
-						if shouldStop {
+						if newElevator.direction == dt.MovingStopped {
+								motorDirectionCh <- dt.MovingStopped
 								doorOpenCh <- OPEN_DOOR
 								go startDoorTimer(doorTimerCh)
-								//Send floorNumber to statehandler
+								completedOrdersCh <- newElevator.currentFloor
 						}
+
+						currentElevator = newElevator
 
 				case <- restartCh:
 
@@ -111,6 +111,8 @@ func RunStateMachine(elevatorID int,
 						} else {
 								doorOpenCh <- CLOSE_DOOR
 								newElevator := updateOnDoorClosing(currentElevator)
+
+								currentElevator = newElevator
 						}
 
 				case currentElevator.doorObstructed <- obstructionSwitchCh:
