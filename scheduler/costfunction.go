@@ -38,7 +38,7 @@ func TimeToIdle(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType) int {
 			}
 		}
 		elevator.Floor += int(elevator.MovingDirection)
-		fmt.Println(elevator.Floor)
+		//fmt.Println(elevator.Floor)
 		//fmt.Printf("Elevator floor is: %v ", elevator.Floor)
 		duration += TRAVEL_TIME
 	}
