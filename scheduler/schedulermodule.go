@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	dt "../datatypes"
-	"fmt"
 )
 
 func RunOrdersScheduler(
@@ -20,12 +19,10 @@ func RunOrdersScheduler(
 		select {
 		case newOrder := <-newOrderIOCh:
 			updatedOrderMatrices := placeOrder(newOrder, elevatorStatesCopy, orderMatricesCopy)
-			fmt.Println(updatedOrderMatrices)
 			updateOrderMatricesCh <- updatedOrderMatrices
 
 		case newOrder := <-newOrderSHCh:
 			updatedOrderMatrices := placeOrder(newOrder, elevatorStatesCopy, orderMatricesCopy)
-			fmt.Println(updatedOrderMatrices)
 			updateOrderMatricesCh <- updatedOrderMatrices
 
 		case elevatorStatesUpdate := <-elevatorStatesCh:
@@ -42,7 +39,7 @@ func placeOrder(
 	elevatorStates [dt.ElevatorCount]dt.ElevatorState,
 	orderMatrices [dt.ElevatorCount]dt.OrderMatrixType,
 ) [dt.ElevatorCount]dt.OrderMatrixType {
-	updatedOrderMatrices := orderMatrices
+	var updatedOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType
 
 	fastestElevatorIndex := findFastestElevator(elevatorStates, orderMatrices)
 

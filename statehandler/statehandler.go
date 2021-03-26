@@ -129,21 +129,21 @@ func sendAcceptedOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.Or
 }
 
 func setButtonLamps(newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, buttonLampCh chan<- iomodule.ButtonLampType) {
-	for _, newOrderMatrix := range newOrderMatrices {
-		for rowIndex, row := range newOrderMatrix {
-			btn := dt.ButtonType(rowIndex)
-			for floor, newOrder := range row {
-				lampStatus := false
-				order := dt.OrderType{Button: btn, Floor: floor}
-				if newOrder == dt.Accepted {
-					lampStatus = true
-					fmt.Printf("Set lamp %v %v \n", order, lampStatus)
-				}
-				buttonLampCh <- iomodule.ButtonLampType{Order: order, TurnOn: lampStatus}
 
+	for rowIndex, row := range newOrderMatrices[0] {
+		btn := dt.ButtonType(rowIndex)
+		for floor, _ := range row {
+			lampStatus := false
+			order := dt.OrderType{Button: btn, Floor: floor}
+			for _, orderMatrix := range newOrderMatrices {
+				if orderMatrix[rowIndex][floor] == dt.Accepted {
+					lampStatus = true
+				}
 			}
+			buttonLampCh <- iomodule.ButtonLampType{Order: order, TurnOn: lampStatus}
 		}
 	}
+
 }
 
 func replaceNewOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
