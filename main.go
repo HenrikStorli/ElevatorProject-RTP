@@ -48,6 +48,7 @@ func main() {
 	floorIndicatorCh := make(chan int)
 	doorOpenCh := make(chan bool)
 	stopLampCh := make(chan bool)
+	buttonLampCh := make(chan iomodule.ButtonLampType)
 
 	buttonEventCh := make(chan dt.OrderType)
 	floorSensorCh := make(chan int)
@@ -68,6 +69,7 @@ func main() {
 		floorIndicatorCh,
 		doorOpenCh,
 		stopLampCh,
+		buttonLampCh,
 		buttonEventCh,
 		floorSensorCh,
 		stopBtnCh,
@@ -84,6 +86,7 @@ func main() {
 		redirectedOrderCh,
 		driverStateUpdateCh,
 		acceptedOrderCh, completedOrderFloorCh,
+		buttonLampCh,
 	)
 
 	go elevatordriver.RunStateMachine(
