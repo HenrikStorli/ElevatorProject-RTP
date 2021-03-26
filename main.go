@@ -7,8 +7,10 @@ import (
 	"time"
 
 	dt "./datatypes"
+	"./elevatordriver"
 	"./iomodule"
 	"./netmodule"
+	"./scheduler"
 	"./statehandler"
 )
 
@@ -32,7 +34,9 @@ func main() {
 
 	driverStateUpdateCh := make(chan dt.ElevatorState)
 	acceptedOrderCh := make(chan dt.OrderType)
-	completedOrderCh := make(chan dt.OrderType)
+	completedOrderFloorCh := make(chan int)
+
+	restartCh := make(chan bool)
 
 	newOrdersCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
 	redirectedOrderCh := make(chan dt.OrderType)
@@ -84,10 +88,31 @@ func main() {
 		newOrdersCh,
 		redirectedOrderCh,
 		driverStateUpdateCh,
-		acceptedOrderCh, completedOrderCh,
+		acceptedOrderCh, completedOrderFloorCh,
+	)
+
+	go elevatordriver.RunStateMachine(
+		elevatorID,
+		driverStateUpdateCh,
+		completedOrderFloorCh, acceptedOrderCh,
+		restartCh,
+		floorSensorCh, stopBtnCh, obstructionSwitchCh,
+		floorIndicatorCh, motorDirCh, doorOpenCh, stopLampCh,
+	)
+
+	go scheduler.RunOrdersScheduler(
+		buttonEventCh, redirectedOrderCh,
+		stateUpdateCh, orderUpdateCh,
+		newOrdersCh,
 	)
 
 	for {
+		select {
+		case acceptedOrder := <-acceptedOrderCh:
+			fmt.Printf("Accepted order: %v \n", acceptedOrder)
+		case completedOrderFloor := <-completedOrderFloorCh:
+			fmt.Printf("Completed order at floor %d \n", completedOrderFloor)
+		}
 		time.Sleep(10 * time.Millisecond)
 	}
 
