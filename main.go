@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"strconv"
 	"time"
 
 	dt "./datatypes"
@@ -119,7 +118,8 @@ func main() {
 }
 
 func parseIDFlag() (int, error) {
-	var idString = flag.String("id", "int", "Id of the elevator")
-	elevatorID, err := strconv.Atoi(*idString)
-	return elevatorID, err
+	var elevatorID int
+	flag.IntVar(&elevatorID, "id", 1, "Id of the elevator")
+	flag.Parse()
+	return elevatorID, nil
 }
