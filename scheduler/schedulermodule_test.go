@@ -21,19 +21,20 @@ func TestSchedulerModule(*testing.T) {
 
 	var mockStates [dt.ElevatorCount]dt.ElevatorState
 	var mockOrders [dt.ElevatorCount]dt.OrderMatrixType
+	mockStates[0].IsFunctioning = true
+	go func() {
+		elevatorStatesCh <- mockStates
+		orderMatricesCh <- mockOrders
+		time.Sleep(10 * time.Millisecond)
+		newOrderIOCh <- dt.OrderType{Button: dt.BtnHallUp, Floor: 1}
+		time.Sleep(10 * time.Millisecond)
+		newOrderSHCh <- dt.OrderType{Button: dt.BtnHallDown, Floor: 3}
+	}()
 
-	elevatorStatesCh <- mockStates
-	orderMatricesCh <- mockOrders
-	time.Sleep(10 * time.Millisecond)
-	newOrderIOCh <- dt.OrderType{Button: dt.BtnHallUp, Floor: 1}
-	time.Sleep(10 * time.Millisecond)
-	newOrderSHCh <- dt.OrderType{Button: dt.BtnHallDown, Floor: 3}
+	updateOrderMatrices := <-updateOrderMatricesCh
+	fmt.Println(updateOrderMatrices)
 
-	for {
-		select {
-		case updateOrderMatrices := <-updateOrderMatricesCh:
-			fmt.Println(updateOrderMatrices)
-		}
-	}
+	updateOrderMatrices = <-updateOrderMatricesCh
+	fmt.Println(updateOrderMatrices)
 
 }

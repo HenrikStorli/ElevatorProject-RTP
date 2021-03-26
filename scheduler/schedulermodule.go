@@ -4,8 +4,6 @@ import (
 	dt "../datatypes"
 )
 
-//Local variables needed in the moduel
-
 func RunOrdersScheduler(
 	newOrderIOCh <-chan dt.OrderType,
 	newOrderSHCh <-chan dt.OrderType,
@@ -41,13 +39,22 @@ func placeOrder(
 	elevatorStates [dt.ElevatorCount]dt.ElevatorState,
 	orderMatrices [dt.ElevatorCount]dt.OrderMatrixType,
 ) [dt.ElevatorCount]dt.OrderMatrixType {
+	updatedOrderMatrices := orderMatrices
 
+	fastestElevatorIndex := findFastestElevator(elevatorStates, orderMatrices)
+
+	updatedOrderMatrices[fastestElevatorIndex][newOrder.Button][newOrder.Floor] = dt.New
+
+	return updatedOrderMatrices
+}
+
+func findFastestElevator(elevatorStates [dt.ElevatorCount]dt.ElevatorState, orderMatrices [dt.ElevatorCount]dt.OrderMatrixType) int {
 	var fastestElevatorIndex int = 0
 	var fastestExecutionTime int = 1000
 
 	for elevatorIndex, state := range elevatorStates {
 		if state.IsFunctioning {
-			executionTime := TimeToIdle(state, orderMatrices[elevatorIndex])
+			executionTime := 0 //TimeToIdle(state, orderMatrices[elevatorIndex])
 
 			if executionTime < fastestExecutionTime {
 				fastestExecutionTime = executionTime
@@ -55,9 +62,5 @@ func placeOrder(
 			}
 		}
 	}
-
-	var updatedOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType = orderMatrices
-	updatedOrderMatrices[fastestElevatorIndex][newOrder.Button][newOrder.Floor] = dt.New
-
-	return updatedOrderMatrices
+	return fastestElevatorIndex
 }
