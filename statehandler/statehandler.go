@@ -27,7 +27,7 @@ func RunStateHandlerModule(elevatorID int,
 	//Interface towards elevator driver
 	driverStateUpdateCh <-chan dt.ElevatorState,
 	acceptedOrderCh chan<- dt.OrderType,
-	completedOrderCh <-chan dt.OrderType,
+	completedOrderFloorCh <-chan int,
 
 ) {
 
@@ -69,8 +69,8 @@ func RunStateHandlerModule(elevatorID int,
 
 			elevatorStates = updatedStates
 
-		case completedOrder := <-completedOrderCh:
-			updatedOrderMatrices := updateCompletedOrder(elevatorID, completedOrder, orderMatrices)
+		case completedOrderFloor := <-completedOrderFloorCh:
+			updatedOrderMatrices := updateCompletedOrder(elevatorID, completedOrderFloor, orderMatrices)
 
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
 
@@ -195,14 +195,15 @@ func updateSingleOrder(newOrder dt.OrderStateType, oldOrder dt.OrderStateType) d
 	return updatedOrder
 }
 
-func updateCompletedOrder(elevatorID int, completedOrder dt.OrderType, oldOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
+func updateCompletedOrder(elevatorID int, completedOrderFloor int, oldOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
 	indexID := elevatorID - 1
 	updatedOrderMatrices := oldOrderMatrices
-	floor := completedOrder.Floor
-	btn := completedOrder.Button
+	floor := completedOrderFloor
 
-	oldOrder := &updatedOrderMatrices[indexID][btn][floor]
-	*oldOrder = updateSingleOrder(dt.Completed, *oldOrder)
+	for rowIndex := range oldOrderMatrices {
+		oldOrder := &updatedOrderMatrices[indexID][rowIndex][floor]
+		*oldOrder = updateSingleOrder(dt.Completed, *oldOrder)
+	}
 
 	return updatedOrderMatrices
 }
