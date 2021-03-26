@@ -38,8 +38,9 @@ func RunStateHandlerModule(elevatorID int,
 		case newOrderMatrices := <-incomingOrderCh:
 			updatedOrderMatrices := updateOrders(newOrderMatrices, orderMatrices)
 
-			updatedOrderMatrices = acknowledgeNewOrders(elevatorID, updatedOrderMatrices)
+
 			updatedOrderMatrices = acceptAcknowledgedOrders(elevatorID, updatedOrderMatrices)
+			updatedOrderMatrices = acknowledgeNewOrders(elevatorID, updatedOrderMatrices)
 
 			go sendAcceptedOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
