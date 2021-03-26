@@ -50,9 +50,8 @@ func RunStateHandlerModule(elevatorID int,
 			orderMatrices = updatedOrderMatrices
 
 		case newOrders := <-newOrdersCh:
-			//TODO: add set lights
 			updatedOrderMatrices := updateOrders(newOrders, orderMatrices)
-
+			//TODO: add set lights
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
 			//fmt.Printf("new order %v \n", updatedOrderMatrices)
 			orderMatrices = updatedOrderMatrices
@@ -122,35 +121,34 @@ func sendAcceptedOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.Or
 	}
 }
 
-func acceptAcknowledgedOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
+func replaceNewOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
 	indexID := elevatorID - 1
 	updatedOrderMatrices := newOrderMatrices
-	newOwnOrderMatrix := newOrderMatrices[indexID]
-	for btn, row := range newOwnOrderMatrix {
-		for floor, newOrder := range row {
-			if newOrder == dt.Acknowledged {
-				updatedOrderMatrices[indexID][btn][floor] = dt.Accepted
-			}
+	for ID := range newOrderMatrices {
+		if ID != indexID {
+			updatedOrderMatrices[ID] = replaceExistingOrders(dt.New, dt.Acknowledged, updatedOrderMatrices[ID])
+			updatedOrderMatrices[ID] = replaceExistingOrders(dt.Completed, dt.None, updatedOrderMatrices[ID])
+		}
+		if ID == indexID {
+			updatedOrderMatrices[ID] = replaceExistingOrders(dt.Acknowledged, dt.Accepted, updatedOrderMatrices[ID])
 		}
 	}
 	return updatedOrderMatrices
 }
 
-func acknowledgeNewOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
-	indexID := elevatorID - 1
-	updatedOrderMatrices := newOrderMatrices
-	for id, ordermatrix := range newOrderMatrices {
-		if id != indexID {
-			for btn, row := range ordermatrix {
-				for floor, newOrder := range row {
-					if newOrder == dt.New {
-						updatedOrderMatrices[id][btn][floor] = dt.Acknowledged
-					}
-				}
+func replaceExistingOrders(existingOrderType dt.OrderStateType,
+	newOrderType dt.OrderStateType, newOrderMatrix dt.OrderMatrixType) dt.OrderMatrixType {
+
+	updatedOrderMatrix := newOrderMatrix
+	for btn, row := range newOrderMatrix {
+		for floor, newOrder := range row {
+			if newOrder == existingOrderType {
+				updatedOrderMatrix[btn][floor] = newOrderType
 			}
 		}
 	}
-	return updatedOrderMatrices
+	return updatedOrderMatrix
+
 }
 
 func updateOrders(newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, oldOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
@@ -205,7 +203,7 @@ func updateCompletedOrder(elevatorID int, completedOrderFloor int, oldOrderMatri
 
 	for rowIndex := range oldOrderMatrices {
 		oldOrder := oldOrderMatrices[indexID][rowIndex][floor]
-		if oldOrder == dt.Accepted{
+		if oldOrder == dt.Accepted {
 			updatedOrderMatrices[indexID][rowIndex][floor] = dt.Completed
 		}
 	}
