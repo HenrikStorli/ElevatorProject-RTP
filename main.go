@@ -10,6 +10,7 @@ import (
 	"./elevatordriver"
 	"./iomodule"
 	"./netmodule"
+	"./scheduler"
 	"./statehandler"
 )
 
@@ -97,6 +98,12 @@ func main() {
 		restartCh,
 		floorSensorCh, stopBtnCh, obstructionSwitchCh,
 		floorIndicatorCh, motorDirCh, doorOpenCh, stopLampCh,
+	)
+
+	go scheduler.RunOrdersScheduler(
+		buttonEventCh, redirectedOrderCh,
+		stateUpdateCh, orderUpdateCh,
+		newOrdersCh,
 	)
 
 	for {
