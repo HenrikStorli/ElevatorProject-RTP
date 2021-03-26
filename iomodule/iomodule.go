@@ -1,11 +1,14 @@
 package iomodule
 
 import (
+	"strconv"
+
 	dt "../datatypes"
 	"./elevio"
 )
 
 func RunIOModule(
+	port int,
 	//Input
 	motorDirCh <-chan dt.MoveDirectionType,
 	floorIndicatorCh <-chan int,
@@ -19,7 +22,8 @@ func RunIOModule(
 	obstructionSwitchCh chan<- bool,
 
 ) {
-	elevio.Init("localhost:15657", dt.FloorCount)
+	portString := strconv.Itoa(port)
+	elevio.Init("localhost:"+portString, dt.FloorCount)
 
 	go elevio.PollButtons(buttonEventCh)
 	go elevio.PollFloorSensor(floorSensorCh)

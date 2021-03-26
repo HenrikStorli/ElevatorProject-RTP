@@ -2,8 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"strconv"
 	"time"
 
 	dt "./datatypes"
@@ -16,11 +14,7 @@ import (
 
 func main() {
 
-	elevatorID, err := parseIDFlag()
-	if err != nil {
-		fmt.Println("Could not parse id string, defaulting to ID 1")
-		elevatorID = 1
-	}
+	elevatorID, port := parseFlag()
 
 	ports := netmodule.NetworkPorts{
 		PeerTxPort:  16363,
@@ -36,7 +30,7 @@ func main() {
 	acceptedOrderCh := make(chan dt.OrderType)
 	completedOrderFloorCh := make(chan int)
 
-	restartCh := make(chan bool)
+	restartCh := make(chan int)
 
 	newOrdersCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
 	redirectedOrderCh := make(chan dt.OrderType)
@@ -69,6 +63,7 @@ func main() {
 	)
 
 	go iomodule.RunIOModule(
+		port,
 		motorDirCh,
 		floorIndicatorCh,
 		doorOpenCh,
@@ -107,19 +102,17 @@ func main() {
 	)
 
 	for {
-		select {
-		case acceptedOrder := <-acceptedOrderCh:
-			fmt.Printf("Accepted order: %v \n", acceptedOrder)
-		case completedOrderFloor := <-completedOrderFloorCh:
-			fmt.Printf("Completed order at floor %d \n", completedOrderFloor)
-		}
+
 		time.Sleep(10 * time.Millisecond)
 	}
 
 }
 
-func parseIDFlag() (int, error) {
-	var idString = flag.String("id", "int", "Id of the elevator")
-	elevatorID, err := strconv.Atoi(*idString)
-	return elevatorID, err
+func parseFlag() (int, int) {
+	var elevatorID int
+	var port int
+	flag.IntVar(&elevatorID, "id", 1, "Id of the elevator")
+	flag.IntVar(&port, "port", 15657, "IP port to harware server")
+	flag.Parse()
+	return elevatorID, port
 }
