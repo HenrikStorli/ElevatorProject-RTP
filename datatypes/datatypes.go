@@ -55,8 +55,8 @@ type ElevatorState struct {
 
 const (
 	Init MachineStateType = iota
-	Idle
-	Moving
-	DoorOpen
+	Idle 
+	Moving 
+	DoorOpen 
 	Error
 )
