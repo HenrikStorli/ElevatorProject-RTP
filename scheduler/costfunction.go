@@ -10,7 +10,7 @@ const (
 	DOOR_OPEN_TIME     = 3
 )
 
-func TimeToIdle(elevator dt.ElevatorState, ordermatrix dt.OrderMatrixType) int {
+func TimeToIdle(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType) int {
 	duration := 0
 	boolOrderMatrix := convertOrderTypeToBool(orderMatrix)
 
@@ -28,8 +28,8 @@ func TimeToIdle(elevator dt.ElevatorState, ordermatrix dt.OrderMatrixType) int {
 	}
 
 	for {
-		if ed.ElevatorShouldStop(elevator) {
-			boolOrderMatrix = ed.ClearOrdersAtCurrentFloor(elevator, boolOrderMatrix, nil) // nil means that the orders shouldnt really be cleared. I don't think that i is really necessary
+		if ed.ElevatorShouldStop(elevator, boolOrderMatrix) {
+			boolOrderMatrix = ed.ClearOrdersAtCurrentFloor(elevator, boolOrderMatrix) // nil means that the orders shouldnt really be cleared. I don't think that i is really necessary
 			duration += DOOR_OPEN_TIME
 			elevator.MovingDirection = ed.ChooseDirection(elevator, boolOrderMatrix)
 			if elevator.MovingDirection == dt.MovingStopped {
@@ -42,8 +42,8 @@ func TimeToIdle(elevator dt.ElevatorState, ordermatrix dt.OrderMatrixType) int {
 	return duration
 }
 
-func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.orderMatrixBool {
-		var boolMatrix orderMatrixBool
+func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.OrderMatrixBool {
+		var boolMatrix ed.OrderMatrixBool
 		for floor := 0; floor < dt.FloorCount; floor ++ {
 				for btnType := 0; btnType < dt.ButtonCount; btnType++ {
 						if orderMatrix[floor][btnType] == dt.Accepted {
