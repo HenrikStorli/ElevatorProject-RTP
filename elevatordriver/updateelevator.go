@@ -4,7 +4,7 @@ import (
 	dt "../datatypes"
 )
 
-func updateOnNewAcceptedOrder(order dt.OrderType, elevator dt.ElevatorState, orderMatrix orderMatrixBool)  (orderMatrixBool, dt.ElevatorState) {
+func updateOnNewAcceptedOrder(order dt.OrderType, elevator dt.ElevatorState, orderMatrix OrderMatrixBool)  (OrderMatrixBool, dt.ElevatorState) {
 
 		switch(elevator.State){
 		case dt.Idle:
@@ -31,14 +31,14 @@ func updateOnNewAcceptedOrder(order dt.OrderType, elevator dt.ElevatorState, ord
 		return orderMatrix, elevator
 }
 
-func updateOnNewFloorArrival(newFloor int, elevator dt.ElevatorState, orderMatrix orderMatrixBool)  (orderMatrixBool, dt.ElevatorState) {
+func updateOnNewFloorArrival(newFloor int, elevator dt.ElevatorState, orderMatrix OrderMatrixBool)  (OrderMatrixBool, dt.ElevatorState) {
 
 		elevator.Floor = newFloor
 
 		switch (elevator.State) {
 		case dt.Moving:
 				if ElevatorShouldStop(elevator, orderMatrix) {
-						orderMatrix = clearOrdersAtCurrentFloor(elevator, orderMatrix)
+						orderMatrix = ClearOrdersAtCurrentFloor(elevator, orderMatrix)
 						//elevator.directionPriority = calculatedirectionPriority(elevator)
 						elevator.State = dt.DoorOpen
 				}
@@ -50,7 +50,7 @@ func updateOnNewFloorArrival(newFloor int, elevator dt.ElevatorState, orderMatri
 		return orderMatrix, elevator
 }
 
-func updateOnDoorClosing(elevator dt.ElevatorState, orderMatrix orderMatrixBool) dt.ElevatorState {
+func updateOnDoorClosing(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) dt.ElevatorState {
 		switch(elevator.State){
 		case dt.DoorOpen:
 				elevator.MovingDirection = ChooseDirection(elevator, orderMatrix)
@@ -65,7 +65,7 @@ func updateOnDoorClosing(elevator dt.ElevatorState, orderMatrix orderMatrixBool)
 		return elevator
 }
 
-func ElevatorShouldStop(elevator dt.ElevatorState, orderMatrix orderMatrixBool) bool {
+func ElevatorShouldStop(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {
 		if anyCabOrdersAtCurrentFloor(elevator, orderMatrix ) {
 				return true
 
@@ -83,7 +83,7 @@ func ElevatorShouldStop(elevator dt.ElevatorState, orderMatrix orderMatrixBool) 
 		return false 
 }
 
-func ChooseDirection(elevator dt.ElevatorState, orderMatrix orderMatrixBool) dt.MoveDirectionType {
+func ChooseDirection(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) dt.MoveDirectionType {
 		switch(elevator.MovingDirection){
 		case dt.MovingUp:
 				if anyOrdersAbove(elevator, orderMatrix) {

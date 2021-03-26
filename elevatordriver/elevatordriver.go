@@ -9,7 +9,7 @@ const (
 	CLOSE_DOOR 	= false
 )
 
-type orderMatrixBool [dt.ButtonCount][dt.FloorCount] bool
+type OrderMatrixBool [dt.ButtonCount][dt.FloorCount] bool
 
 
 func RunStateMachine(elevatorID int,
@@ -31,7 +31,7 @@ func RunStateMachine(elevatorID int,
 		// Local data
 
 		var elevator dt.ElevatorState
-		var orderMatrix	orderMatrixBool
+		var orderMatrix	OrderMatrixBool
 		var	doorObstructed bool
 
 		//Internal channels
