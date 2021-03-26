@@ -106,12 +106,7 @@ func main() {
 	)
 
 	for {
-		select {
-		case acceptedOrder := <-acceptedOrderCh:
-			fmt.Printf("Accepted order: %v \n", acceptedOrder)
-		case completedOrderFloor := <-completedOrderFloorCh:
-			fmt.Printf("Completed order at floor %d \n", completedOrderFloor)
-		}
+
 		time.Sleep(10 * time.Millisecond)
 	}
 
