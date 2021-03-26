@@ -2,7 +2,7 @@ package statehandler
 
 import (
 	"time"
-	"fmt"
+	//"fmt"
 	dt "../datatypes"
 )
 
@@ -39,11 +39,11 @@ func RunStateHandlerModule(elevatorID int,
 		case newOrderMatrices := <-incomingOrderCh:
 			updatedOrderMatrices := updateOrders(newOrderMatrices, orderMatrices)
 
-			fmt.Printf("received network %v \n", orderMatrices)
+			//fmt.Printf("received network %v \n", orderMatrices)
 			updatedOrderMatrices = acceptAcknowledgedOrders(elevatorID, updatedOrderMatrices)
-			fmt.Printf("acc %v \n", orderMatrices)
+			//fmt.Printf("acc %v \n", orderMatrices)
 			updatedOrderMatrices = acknowledgeNewOrders(elevatorID, updatedOrderMatrices)
-			fmt.Printf("ack %v \n", orderMatrices)
+			//fmt.Printf("ack %v \n", orderMatrices)
 			go sendAcceptedOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
 
@@ -54,7 +54,7 @@ func RunStateHandlerModule(elevatorID int,
 			updatedOrderMatrices := updateOrders(newOrders, orderMatrices)
 
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
-			fmt.Printf("new order %v \n", updatedOrderMatrices)
+			//fmt.Printf("new order %v \n", updatedOrderMatrices)
 			orderMatrices = updatedOrderMatrices
 
 		case newState := <-incomingStateCh:
@@ -73,9 +73,9 @@ func RunStateHandlerModule(elevatorID int,
 
 		case completedOrderFloor := <-completedOrderFloorCh:
 			updatedOrderMatrices := updateCompletedOrder(elevatorID, completedOrderFloor, orderMatrices)
-			fmt.Printf("Completed orders at floor %v \n", completedOrderFloor)
+			//fmt.Printf("Completed orders at floor %v \n", completedOrderFloor)
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
-			fmt.Printf("compl %v \n", orderMatrices)
+			//fmt.Printf("compl %v \n", orderMatrices)
 			orderMatrices = updatedOrderMatrices
 
 		case disconnectingElevatorID := <-disconnectingElevatorIDCh:
@@ -88,7 +88,7 @@ func RunStateHandlerModule(elevatorID int,
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
 
 			orderMatrices = updatedOrderMatrices
-			fmt.Printf("disc %v \n", orderMatrices)
+			//fmt.Printf("disc %v \n", orderMatrices)
 			elevatorStates = updatedStates
 		}
 	}

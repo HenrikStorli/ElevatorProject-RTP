@@ -20,12 +20,12 @@ func RunOrdersScheduler(
 		select {
 		case newOrder := <-newOrderIOCh:
 			updatedOrderMatrices := placeOrder(newOrder, elevatorStatesCopy, orderMatricesCopy)
-			fmt.Println(updatedOrderMatrices)
+			//fmt.Println(updatedOrderMatrices)
 			updateOrderMatricesCh <- updatedOrderMatrices
 
 		case newOrder := <-newOrderSHCh:
 			updatedOrderMatrices := placeOrder(newOrder, elevatorStatesCopy, orderMatricesCopy)
-			fmt.Println(updatedOrderMatrices)
+			//fmt.Println(updatedOrderMatrices)
 			updateOrderMatricesCh <- updatedOrderMatrices
 
 		case elevatorStatesUpdate := <-elevatorStatesCh:
@@ -33,6 +33,7 @@ func RunOrdersScheduler(
 		case orderMatricesUpdate := <-orderMatricesCh:
 			orderMatricesCopy = orderMatricesUpdate
 		}
+		fmt.Println("In scheduler")
 	}
 
 }
@@ -43,7 +44,7 @@ func placeOrder(
 	orderMatrices [dt.ElevatorCount]dt.OrderMatrixType,
 ) [dt.ElevatorCount]dt.OrderMatrixType {
 	updatedOrderMatrices := orderMatrices
-
+	fmt.Println("In placeOrder")
 	fastestElevatorIndex := findFastestElevator(elevatorStates, orderMatrices)
 
 	updatedOrderMatrices[fastestElevatorIndex][newOrder.Button][newOrder.Floor] = dt.New
