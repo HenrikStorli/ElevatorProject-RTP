@@ -9,24 +9,8 @@ const (
 	CLOSE_DOOR 	= false
 )
 
-type directionPriorityType int
-
-const (
-	PRIORITY_DOWN	directionPriorityType = -1
-	PRIORITY_NONE                         = 0
-	PRIORITY_UP                           = 1
-)
-
 type orderMatrixBool [dt.ButtonCount][dt.FloorCount] bool
-	
-type elevatorType struct {
-	direction			dt.MoveDirectionType
-	//directionPriority	directionPriorityType
-	state        		dt.MachineStateType
-	orderMatrix			orderMatrixBool
-	currentFloor		int
-	doorObstructed		bool
-}
+
 
 func RunStateMachine(elevatorID int,
 		//To statehandler
@@ -45,7 +29,10 @@ func RunStateMachine(elevatorID int,
 		doorOpenCh chan<- bool,
 		setStopCh chan<- bool) {
 		// Local data
-		var elevator elevatorType
+
+		var elevator ElevatorState
+		var orderMatrix	orderMatrixBool
+		var	doorObstructed bool
 
 		//Internal channels
 		doorTimerCh := make(chan bool)
@@ -53,46 +40,46 @@ func RunStateMachine(elevatorID int,
 		// Initialize the elevators position
 		select{
 		case newFloor := <- floorSwitchCh:
-				elevator.currentFloor = newFloor
+				elevator.Floor = newFloor
 		default:
 				motorDirectionCh <- dt.MovingDown
 				newFloor := <- floorSwitchCh
-				elevator.currentFloor = newFloor
+				elevator.Floor = newFloor
 				motorDirectionCh <- dt.MovingStopped
 		}
-		elevator.direction = dt.MovingStopped
-		elevator.state = dt.Idle
+		elevator.MovingDirection = dt.MovingStopped
+		elevator.State = dt.Idle
 		
-		// Run state machine
+		// Run State machine
 		for {
 				select {
 				case newAcceptedOrder:= <- acceptedOrderCh:
-						newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator)
+						orderMatrix, newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator, orderMatrix)
 
-						if elevator.state != newElevator.state {
-								if newElevator.state == dt.Moving  {
-										motorDirectionCh <- newElevator.direction
+						if elevator.State != newElevator.State {
+								if newElevator.State == dt.Moving  {
+										motorDirectionCh <- newElevator.MovingDirection
 
-								} else if newElevator.state == dt.DoorOpen {
+								} else if newElevator.State == dt.DoorOpen {
 										go startDoorTimer(doorTimerCh)
 										doorOpenCh <- OPEN_DOOR
-										completedOrdersCh <- newElevator.currentFloor
+										completedOrdersCh <- newElevator.Floor
 								}
 
 						} else {
-								if newElevator.state == dt.DoorOpen {
-										completedOrdersCh <- newElevator.currentFloor
+								if newElevator.State == dt.DoorOpen {
+										completedOrdersCh <- newElevator.Floor
 								}
 						}
 
 						elevator = newElevator
 
 				case newFloor:= <- floorSwitchCh:
-						newElevator := updateOnNewFloorArrival(newFloor, elevator)
+						orderMatrix, newElevator := updateOnNewFloorArrival(newFloor, elevator, orderMatrix)
 						
 						floorIndicatorCh <- newFloor
 						
-						if newElevator.state == dt.DoorOpen {
+						if newElevator.State == dt.DoorOpen {
 								motorDirectionCh <- dt.MovingStopped
 								doorOpenCh <- OPEN_DOOR
 								go startDoorTimer(doorTimerCh)

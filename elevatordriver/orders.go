@@ -9,22 +9,22 @@ const (
   INACTIVE  = false
 )
 
-func updateOrder(elevator elevatorType, order dt.OrderType, status bool) orderMatrixBool {
-        elevator.orderMatrix[order.Button][order.Floor] = status
-        return elevator.orderMatrix
+func updateOrder(orderMatrix orderMatrixBool, order dt.OrderType, status bool) orderMatrixBool {
+        orderMatrix[order.Button][order.Floor] = status
+        return orderMatrix
 }
 
-func clearOrdersAtCurrentFloor(elevator elevatorType) orderMatrixBool {    
+func clearOrdersAtCurrentFloor(elevator ElevatorState, orderMatrix orderMatrixBool) orderMatrixBool {    
         for btnType := 0; btnType < dt.ButtonCount; btnType++ {
-                elevator.orderMatrix[btnType][elevator.currentFloor] = INACTIVE
+                orderMatrix[btnType][elevator.Floor] = INACTIVE
         }
-        return elevator.orderMatrix
+        return orderMatrix
 }
 
-func anyOrders(elevator elevatorType) bool {
+func anyOrders(orderMatrix orderMatrixBool) bool {
         for floor := 0; floor < dt.FloorCount; floor++ {
                 for btnType := 0; btnType < dt.ButtonCount; btnType++ {
-                        if elevator.orderMatrix[btnType][floor] {
+                        if orderMatrix[btnType][floor] {
                                 return true
                         }
                 }
@@ -32,19 +32,19 @@ func anyOrders(elevator elevatorType) bool {
         return false
 }
 
-func anyOrdersAtCurrentFloor(elevator elevatorType) bool {
+func anyOrdersAtCurrentFloor(elevator ElevatorState, orderMatrix orderMatrixBool) bool {
         for btnType := 0; btnType < dt.ButtonCount; btnType++ {
-                if elevator.orderMatrix[btnType][elevator.currentFloor] {
+                if orderMatrix[btnType][elevator.Floor] {
                         return true
                 }
         }
         return false
 }
 
-func anyOrdersAbove(elevator elevatorType) bool {                   
-        for floor := elevator.currentFloor + 1; floor < dt.FloorCount; floor++ {      
+func anyOrdersAbove(elevator ElevatorState, orderMatrix orderMatrixBool) bool {                   
+        for floor := elevator.Floor + 1; floor < dt.FloorCount; floor++ {      
                 for btnType := 0; btnType < dt.ButtonCount; btnType++ {
-                        if elevator.orderMatrix[btnType][floor] {
+                        if orderMatrix[btnType][floor] {
                                 return true
                         }
                 }
@@ -52,10 +52,10 @@ func anyOrdersAbove(elevator elevatorType) bool {
         return false
 }
 
-func anyOrdersBelow(elevator elevatorType) bool {              
-        for floor := elevator.currentFloor - 1; floor > -1; floor-- {
+func anyOrdersBelow(elevator ElevatorState, orderMatrix orderMatrixBool) bool {              
+        for floor := elevator.Floor - 1; floor > -1; floor-- {
                 for btnType := 0; btnType < dt.ButtonCount; btnType++ {
-                        if elevator.orderMatrix[btnType][floor] {
+                        if orderMatrix[btnType][floor] {
                                 return true
                         }
                 }
@@ -63,22 +63,22 @@ func anyOrdersBelow(elevator elevatorType) bool {
         return false
 }
 
-func anyCabOrdersAtCurrentFloor(elevator elevatorType) bool {
-        if elevator.orderMatrix[dt.BtnCab][elevator.currentFloor] {
+func anyCabOrdersAtCurrentFloor(elevator ElevatorState, orderMatrix orderMatrixBool) bool {
+        if orderMatrix[dt.BtnCab][elevator.Floor] {
                 return true
         }
         return false
 }
 
-func anyOrdersInTravelingDirectionAtCurrentFloor(elevator elevatorType) bool {
-        switch(elevator.direction){
+func anyOrdersInTravelingDirectionAtCurrentFloor(elevator ElevatorState, orderMatrix orderMatrixBool) bool {
+        switch(elevator.MovingDirection){
         case dt.MovingDown:
-                if elevator.orderMatrix[dt.BtnHallDown][elevator.currentFloor] {
+                if orderMatrix[dt.BtnHallDown][elevator.Floor] {
                         return true
                 }
 
         case dt.MovingUp:
-                if elevator.orderMatrix[dt.BtnHallUp][elevator.currentFloor] {
+                if orderMatrix[dt.BtnHallUp][elevator.Floor] {
                         return true
                 }
         }

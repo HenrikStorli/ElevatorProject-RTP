@@ -4,107 +4,107 @@ import (
 	dt "../datatypes"
 )
 
-func updateOnNewAcceptedOrder(order dt.OrderType, elevator elevatorType)  elevatorType {
+func updateOnNewAcceptedOrder(order dt.OrderType, elevator ElevatorState, orderMatrix orderMatrixBool)  (orderMatrixBool, ElevatorState) {
 
-		switch(elevator.state){
+		switch(elevator.State){
 		case dt.Idle:
-				if elevator.currentFloor == order.Floor {
+				if elevator.Floor == order.Floor {
 						nextState := dt.DoorOpen
-						elevator.state = nextState
+						elevator.State = nextState
 				} else {
 						nextState := dt.Moving
-						elevator.state = nextState
-						elevator.orderMatrix = updateOrder(elevator, order, ACTIVE)
-						elevator.direction = ChooseDirection(elevator)
+						elevator.State = nextState
+						orderMatrix = updateOrder(orderMatrix, order, ACTIVE)
+						elevator.MovingDirection = ChooseDirection(elevator, orderMatrix)
 				}
 		case dt.Moving:
-				elevator.orderMatrix = updateOrder(elevator, order, ACTIVE)
+				orderMatrix = updateOrder(elevator, order, ACTIVE)
 		case dt.DoorOpen:
-				if order.Floor != elevator.currentFloor {
-						elevator.orderMatrix = updateOrder(elevator, order, ACTIVE)
+				if order.Floor != elevator.Floor {
+						orderMatrix = updateOrder(elevator, order, ACTIVE)
 				}
 		case dt.Error:
 
 		default:
 		
 		}
-		return elevator
+		return elevator, orderMatrix
 }
 
-func updateOnNewFloorArrival(newFloor int, elevator elevatorType)  elevatorType {
+func updateOnNewFloorArrival(newFloor int, elevator ElevatorState, orderMatrix orderMatrixBool)  (orderMatrixBool, ElevatorState) {
 
-		elevator.currentFloor = newFloor
+		elevator.Floor = newFloor
 
-		switch (elevator.state) {
+		switch (elevator.State) {
 		case dt.Moving:
 				if ElevatorShouldStop(elevator) {
-						elevator.orderMatrix = clearOrdersAtCurrentFloor(elevator)
+						orderMatrix = clearOrdersAtCurrentFloor(elevator, orderMatrix)
 						//elevator.directionPriority = calculatedirectionPriority(elevator)
-						elevator.state = dt.DoorOpen
+						elevator.State = dt.DoorOpen
 				}
 		//case dt:Error:
 			// Test for reinitialize-criteria
 		default:
 		}
 
-		return elevator
+		return elevator, orderMatrix
 }
 
-func updateOnDoorClosing(elevator elevatorType) elevatorType {
-		switch(elevator.state){
+func updateOnDoorClosing(elevator ElevatorState, orderMatrix orderMatrixBool) ElevatorState {
+		switch(elevator.State){
 		case dt.DoorOpen:
-				elevator.direction = ChooseDirection(elevator)
+				elevator.MovingDirection = ChooseDirection(elevator, orderMatrix)
 				
-				if elevator.direction == dt.MovingStopped {
-						elevator.state = dt.Idle
+				if elevator.MovingDirection == dt.MovingStopped {
+						elevator.State = dt.Idle
 				} else {
-						elevator.state = dt.Moving
+						elevator.State = dt.Moving
 				}
 		default:
 		}	
 		return elevator
 }
 
-func ElevatorShouldStop(elevator elevatorType) bool {
-		if anyCabOrdersAtCurrentFloor(elevator) {
+func ElevatorShouldStop(elevator ElevatorState, orderMatrix orderMatrixBool) bool {
+		if anyCabOrdersAtCurrentFloor(elevator, orderMatrix ) {
 				return true
 
-		} else if anyOrdersInTravelingDirectionAtCurrentFloor(elevator) {
+		} else if anyOrdersInTravelingDirectionAtCurrentFloor(elevator, orderMatrix) {
 				return true 
 
-		} else if anyOrdersAtCurrentFloor(elevator) {
-				if elevator.direction == dt.MovingUp || !anyOrdersAbove(elevator){
+		} else if anyOrdersAtCurrentFloor(elevator, orderMatrix ) {
+				if elevator.MovingDirection == dt.MovingUp || !anyOrdersAbove(elevator, orderMatrix){
 						return true
 
-				} else if elevator.direction == dt.MovingDown || !anyOrdersBelow(elevator) {
+				} else if elevator.MovingDirection == dt.MovingDown || !anyOrdersBelow(elevator, orderMatrix) {
 						return true
 				}
 		}
 		return false 
 }
 
-func ChooseDirection(elevator elevatorType) dt.MoveDirectionType {
-		switch(elevator.direction){
+func ChooseDirection(elevator ElevatorState, orderMatrix orderMatrixBool) dt.MoveDirectionType {
+		switch(elevator.MovingDirection){
 		case dt.MovingUp:
-				if anyOrdersAbove(elevator) {
+				if anyOrdersAbove(elevator, orderMatrix) {
 						return dt.MovingUp
-				} else if anyOrdersBelow(elevator) {
+				} else if anyOrdersBelow(elevator, orderMatrix) {
 						return dt.MovingDown
 				} else {
 						return dt.MovingStopped
 				}
 		case dt.MovingDown:
-				if anyOrdersBelow(elevator) {
+				if anyOrdersBelow(elevator, orderMatrix) {
 						return dt.MovingDown
-				} else if anyOrdersAbove(elevator) {
+				} else if anyOrdersAbove(elevator, orderMatrix) {
 						return dt.MovingUp
 				} else {
 						return dt.MovingStopped
 				}
 		case dt.MovingStopped:
-				if anyOrdersBelow(elevator) {
+				if anyOrdersBelow(elevator, orderMatrix) {
 						return dt.MovingDown
-				} else if anyOrdersAbove(elevator) {
+				} else if anyOrdersAbove(elevator, orderMatrix) {
 						return dt.MovingUp
 				} else {
 					return dt.MovingStopped
