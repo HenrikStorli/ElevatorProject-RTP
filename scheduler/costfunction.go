@@ -46,8 +46,8 @@ func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.OrderMatrixBool {
 		var boolMatrix ed.OrderMatrixBool
 		for floor := 0; floor < dt.FloorCount; floor ++ {
 				for btnType := 0; btnType < dt.ButtonCount; btnType++ {
-						if orderMatrix[floor][btnType] == dt.Accepted {
-								boolMatrix[floor][btnType] = ed.ACTIVE
+						if orderMatrix[btnType][floor] == dt.Accepted {
+								boolMatrix[btnType][floor] = ed.ACTIVE
 						}
 				}
 		}

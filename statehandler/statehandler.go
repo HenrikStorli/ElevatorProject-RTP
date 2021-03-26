@@ -2,7 +2,7 @@ package statehandler
 
 import (
 	"time"
-
+	"fmt"
 	dt "../datatypes"
 )
 
@@ -39,9 +39,11 @@ func RunStateHandlerModule(elevatorID int,
 		case newOrderMatrices := <-incomingOrderCh:
 			updatedOrderMatrices := updateOrders(newOrderMatrices, orderMatrices)
 
-			updatedOrderMatrices = acknowledgeNewOrders(elevatorID, updatedOrderMatrices)
+			fmt.Printf("received network %v \n", orderMatrices)
 			updatedOrderMatrices = acceptAcknowledgedOrders(elevatorID, updatedOrderMatrices)
-
+			fmt.Printf("acc %v \n", orderMatrices)
+			updatedOrderMatrices = acknowledgeNewOrders(elevatorID, updatedOrderMatrices)
+			fmt.Printf("ack %v \n", orderMatrices)
 			go sendAcceptedOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
 
@@ -52,7 +54,7 @@ func RunStateHandlerModule(elevatorID int,
 			updatedOrderMatrices := updateOrders(newOrders, orderMatrices)
 
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
-
+			fmt.Printf("new order %v \n", updatedOrderMatrices)
 			orderMatrices = updatedOrderMatrices
 
 		case newState := <-incomingStateCh:
@@ -71,9 +73,9 @@ func RunStateHandlerModule(elevatorID int,
 
 		case completedOrderFloor := <-completedOrderFloorCh:
 			updatedOrderMatrices := updateCompletedOrder(elevatorID, completedOrderFloor, orderMatrices)
-
+			fmt.Printf("Completed orders at floor %v \n", completedOrderFloor)
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
-
+			fmt.Printf("compl %v \n", orderMatrices)
 			orderMatrices = updatedOrderMatrices
 
 		case disconnectingElevatorID := <-disconnectingElevatorIDCh:
@@ -86,6 +88,7 @@ func RunStateHandlerModule(elevatorID int,
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
 
 			orderMatrices = updatedOrderMatrices
+			fmt.Printf("disc %v \n", orderMatrices)
 			elevatorStates = updatedStates
 		}
 	}
@@ -201,8 +204,10 @@ func updateCompletedOrder(elevatorID int, completedOrderFloor int, oldOrderMatri
 	floor := completedOrderFloor
 
 	for rowIndex := range oldOrderMatrices {
-		oldOrder := &updatedOrderMatrices[indexID][rowIndex][floor]
-		*oldOrder = updateSingleOrder(dt.Completed, *oldOrder)
+		oldOrder := oldOrderMatrices[indexID][rowIndex][floor]
+		if oldOrder == dt.Accepted{
+			updatedOrderMatrices[indexID][rowIndex][floor] = dt.Completed
+		}
 	}
 
 	return updatedOrderMatrices

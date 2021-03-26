@@ -2,6 +2,7 @@ package elevatordriver
 
 import (
 	dt "../datatypes"
+	"fmt"
 )
 
 const (
@@ -18,7 +19,7 @@ func RunStateMachine(elevatorID int,
 		completedOrdersCh chan<- int,
 		//From statehandler
 		acceptedOrderCh <-chan dt.OrderType,
-		restartCh <-chan int, 
+		restartCh <-chan int,
 		//From elevio
 		floorSwitchCh <-chan int,
 		stopBtnCh <-chan bool,
@@ -36,7 +37,7 @@ func RunStateMachine(elevatorID int,
 
 		//Internal channels
 		doorTimerCh := make(chan bool)
-		
+
 		// Initialize the elevators position
 		select{
 		case newFloor := <- floorSwitchCh:
@@ -49,13 +50,14 @@ func RunStateMachine(elevatorID int,
 		}
 		elevator.MovingDirection = dt.MovingStopped
 		elevator.State = dt.Idle
-		
+		elevator.IsFunctioning = true
 		// Run State machine
 		for {
 				select {
 				case newAcceptedOrder:= <- acceptedOrderCh:
 						newOrderMatrix, newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator, orderMatrix)
-
+						fmt.Printf("order %v \n", newAcceptedOrder)
+						fmt.Printf("order matrix %v \n", newOrderMatrix)
 						if elevator.State != newElevator.State {
 								if newElevator.State == dt.Moving  {
 										motorDirectionCh <- newElevator.MovingDirection
@@ -77,9 +79,9 @@ func RunStateMachine(elevatorID int,
 
 				case newFloor:= <- floorSwitchCh:
 						newOrderMatrix, newElevator := updateOnNewFloorArrival(newFloor, elevator, orderMatrix)
-						
+
 						floorIndicatorCh <- newFloor
-						
+
 						if newElevator.State == dt.DoorOpen {
 								motorDirectionCh <- dt.MovingStopped
 								doorOpenCh <- OPEN_DOOR
@@ -93,7 +95,7 @@ func RunStateMachine(elevatorID int,
 				case <- doorTimerCh:
 						if doorObstructed {
 								go startDoorTimer(doorTimerCh)
-						
+
 						} else {
 								doorOpenCh <- CLOSE_DOOR
 								newElevator := updateOnDoorClosing(elevator, orderMatrix)
@@ -108,10 +110,7 @@ func RunStateMachine(elevatorID int,
 				case <- stopBtnCh:
 			}
 			// Send updated elevator to statehandler
-			//driverStateUpdateCh <- elevator // This type does not match the type of the channel
+
+			driverStateUpdateCh <- elevator // This type does not match the type of the channel
 		}
 }
-
-
-
- 
