@@ -54,7 +54,7 @@ func findFastestElevator(elevatorStates [dt.ElevatorCount]dt.ElevatorState, orde
 
 	for elevatorIndex, state := range elevatorStates {
 		if state.IsFunctioning {
-			executionTime := 0 //TimeToIdle(state, orderMatrices[elevatorIndex])
+			executionTime := TimeToIdle(state, orderMatrices[elevatorIndex])
 
 			if executionTime < fastestExecutionTime {
 				fastestExecutionTime = executionTime
