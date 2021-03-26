@@ -36,7 +36,7 @@ func main() {
 	acceptedOrderCh := make(chan dt.OrderType)
 	completedOrderFloorCh := make(chan int)
 
-	restartCh := make(chan bool)
+	restartCh := make(chan int)
 
 	newOrdersCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
 	redirectedOrderCh := make(chan dt.OrderType)
