@@ -7,6 +7,7 @@ import (
 	"time"
 
 	dt "./datatypes"
+	"./elevatordriver"
 	"./iomodule"
 	"./netmodule"
 	"./statehandler"
@@ -32,7 +33,9 @@ func main() {
 
 	driverStateUpdateCh := make(chan dt.ElevatorState)
 	acceptedOrderCh := make(chan dt.OrderType)
-	completedOrderCh := make(chan dt.OrderType)
+	completedOrderFloorCh := make(chan int)
+
+	restartCh := make(chan bool)
 
 	newOrdersCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
 	redirectedOrderCh := make(chan dt.OrderType)
@@ -84,7 +87,16 @@ func main() {
 		newOrdersCh,
 		redirectedOrderCh,
 		driverStateUpdateCh,
-		acceptedOrderCh, completedOrderCh,
+		acceptedOrderCh, completedOrderFloorCh,
+	)
+
+	go elevatordriver.RunStateMachine(
+		elevatorID,
+		driverStateUpdateCh,
+		completedOrderFloorCh, acceptedOrderCh,
+		restartCh,
+		floorSensorCh, stopBtnCh, obstructionSwitchCh,
+		floorIndicatorCh, motorDirCh, doorOpenCh, stopLampCh,
 	)
 
 	for {
