@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"time"
 
 	dt "./datatypes"
@@ -15,11 +14,7 @@ import (
 
 func main() {
 
-	elevatorID, err := parseIDFlag()
-	if err != nil {
-		fmt.Println("Could not parse id string, defaulting to ID 1")
-		elevatorID = 1
-	}
+	elevatorID, port := parseFlag()
 
 	ports := netmodule.NetworkPorts{
 		PeerTxPort:  16363,
@@ -68,6 +63,7 @@ func main() {
 	)
 
 	go iomodule.RunIOModule(
+		port,
 		motorDirCh,
 		floorIndicatorCh,
 		doorOpenCh,
@@ -112,9 +108,11 @@ func main() {
 
 }
 
-func parseIDFlag() (int, error) {
+func parseFlag() (int, int) {
 	var elevatorID int
+	var port int
 	flag.IntVar(&elevatorID, "id", 1, "Id of the elevator")
+	flag.IntVar(&port, "port", 15657, "IP port to harware server")
 	flag.Parse()
-	return elevatorID, nil
+	return elevatorID, port
 }
