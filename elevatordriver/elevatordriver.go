@@ -30,7 +30,7 @@ func RunStateMachine(elevatorID int,
 		setStopCh chan<- bool) {
 		// Local data
 
-		var elevator ElevatorState
+		var elevator dt.ElevatorState
 		var orderMatrix	orderMatrixBool
 		var	doorObstructed bool
 
@@ -54,7 +54,7 @@ func RunStateMachine(elevatorID int,
 		for {
 				select {
 				case newAcceptedOrder:= <- acceptedOrderCh:
-						orderMatrix, newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator, orderMatrix)
+						newOrderMatrix, newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator, orderMatrix)
 
 						if elevator.State != newElevator.State {
 								if newElevator.State == dt.Moving  {
@@ -73,9 +73,10 @@ func RunStateMachine(elevatorID int,
 						}
 
 						elevator = newElevator
+						orderMatrix = newOrderMatrix
 
 				case newFloor:= <- floorSwitchCh:
-						orderMatrix, newElevator := updateOnNewFloorArrival(newFloor, elevator, orderMatrix)
+						newOrderMatrix, newElevator := updateOnNewFloorArrival(newFloor, elevator, orderMatrix)
 						
 						floorIndicatorCh <- newFloor
 						
@@ -87,21 +88,22 @@ func RunStateMachine(elevatorID int,
 						}
 
 						elevator = newElevator
+						orderMatrix = newOrderMatrix
 
 				case <- doorTimerCh:
-						if elevator.doorObstructed {
+						if doorObstructed {
 								go startDoorTimer(doorTimerCh)
 						
 						} else {
 								doorOpenCh <- CLOSE_DOOR
-								newElevator := updateOnDoorClosing(elevator)
+								newElevator := updateOnDoorClosing(elevator, orderMatrix)
 
 								elevator = newElevator
 						}
 
 				case <- restartCh:
 
-				case elevator.doorObstructed = <- obstructionSwitchCh:
+				case doorObstructed = <- obstructionSwitchCh:
 
 				case <- stopBtnCh:
 			}

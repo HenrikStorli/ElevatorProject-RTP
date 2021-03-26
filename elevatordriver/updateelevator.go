@@ -4,7 +4,7 @@ import (
 	dt "../datatypes"
 )
 
-func updateOnNewAcceptedOrder(order dt.OrderType, elevator ElevatorState, orderMatrix orderMatrixBool)  (orderMatrixBool, ElevatorState) {
+func updateOnNewAcceptedOrder(order dt.OrderType, elevator dt.ElevatorState, orderMatrix orderMatrixBool)  (orderMatrixBool, dt.ElevatorState) {
 
 		switch(elevator.State){
 		case dt.Idle:
@@ -18,26 +18,26 @@ func updateOnNewAcceptedOrder(order dt.OrderType, elevator ElevatorState, orderM
 						elevator.MovingDirection = ChooseDirection(elevator, orderMatrix)
 				}
 		case dt.Moving:
-				orderMatrix = updateOrder(elevator, order, ACTIVE)
+				orderMatrix = updateOrder(orderMatrix, order, ACTIVE)
 		case dt.DoorOpen:
 				if order.Floor != elevator.Floor {
-						orderMatrix = updateOrder(elevator, order, ACTIVE)
+						orderMatrix = updateOrder(orderMatrix, order, ACTIVE)
 				}
 		case dt.Error:
 
 		default:
 		
 		}
-		return elevator, orderMatrix
+		return orderMatrix, elevator
 }
 
-func updateOnNewFloorArrival(newFloor int, elevator ElevatorState, orderMatrix orderMatrixBool)  (orderMatrixBool, ElevatorState) {
+func updateOnNewFloorArrival(newFloor int, elevator dt.ElevatorState, orderMatrix orderMatrixBool)  (orderMatrixBool, dt.ElevatorState) {
 
 		elevator.Floor = newFloor
 
 		switch (elevator.State) {
 		case dt.Moving:
-				if ElevatorShouldStop(elevator) {
+				if ElevatorShouldStop(elevator, orderMatrix) {
 						orderMatrix = clearOrdersAtCurrentFloor(elevator, orderMatrix)
 						//elevator.directionPriority = calculatedirectionPriority(elevator)
 						elevator.State = dt.DoorOpen
@@ -47,10 +47,10 @@ func updateOnNewFloorArrival(newFloor int, elevator ElevatorState, orderMatrix o
 		default:
 		}
 
-		return elevator, orderMatrix
+		return orderMatrix, elevator
 }
 
-func updateOnDoorClosing(elevator ElevatorState, orderMatrix orderMatrixBool) ElevatorState {
+func updateOnDoorClosing(elevator dt.ElevatorState, orderMatrix orderMatrixBool) dt.ElevatorState {
 		switch(elevator.State){
 		case dt.DoorOpen:
 				elevator.MovingDirection = ChooseDirection(elevator, orderMatrix)
@@ -65,7 +65,7 @@ func updateOnDoorClosing(elevator ElevatorState, orderMatrix orderMatrixBool) El
 		return elevator
 }
 
-func ElevatorShouldStop(elevator ElevatorState, orderMatrix orderMatrixBool) bool {
+func ElevatorShouldStop(elevator dt.ElevatorState, orderMatrix orderMatrixBool) bool {
 		if anyCabOrdersAtCurrentFloor(elevator, orderMatrix ) {
 				return true
 
@@ -83,7 +83,7 @@ func ElevatorShouldStop(elevator ElevatorState, orderMatrix orderMatrixBool) boo
 		return false 
 }
 
-func ChooseDirection(elevator ElevatorState, orderMatrix orderMatrixBool) dt.MoveDirectionType {
+func ChooseDirection(elevator dt.ElevatorState, orderMatrix orderMatrixBool) dt.MoveDirectionType {
 		switch(elevator.MovingDirection){
 		case dt.MovingUp:
 				if anyOrdersAbove(elevator, orderMatrix) {
