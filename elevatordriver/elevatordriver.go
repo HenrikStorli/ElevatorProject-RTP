@@ -50,12 +50,13 @@ func RunStateMachine(elevatorID int,
 		}
 		elevator.MovingDirection = dt.MovingStopped
 		elevator.State = dt.Idle
-
+		elevator.IsFunctioning = true
 		// Run State machine
 		for {
 				select {
 				case newAcceptedOrder:= <- acceptedOrderCh:
 						newOrderMatrix, newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator, orderMatrix)
+						fmt.Printf("order %v \n", newAcceptedOrder)
 						fmt.Printf("order matrix %v \n", newOrderMatrix)
 						if elevator.State != newElevator.State {
 								if newElevator.State == dt.Moving  {
