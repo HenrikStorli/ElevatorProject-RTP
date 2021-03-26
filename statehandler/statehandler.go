@@ -2,7 +2,6 @@ package statehandler
 
 import (
 	"time"
-
 	dt "../datatypes"
 )
 
@@ -201,8 +200,10 @@ func updateCompletedOrder(elevatorID int, completedOrderFloor int, oldOrderMatri
 	floor := completedOrderFloor
 
 	for rowIndex := range oldOrderMatrices {
-		oldOrder := &updatedOrderMatrices[indexID][rowIndex][floor]
-		*oldOrder = updateSingleOrder(dt.Completed, *oldOrder)
+		oldOrder := oldOrderMatrices[indexID][rowIndex][floor]
+		if oldOrder == dt.Accepted{
+			updatedOrderMatrices[indexID][rowIndex][floor] = dt.Completed
+		}
 	}
 
 	return updatedOrderMatrices
