@@ -51,24 +51,30 @@ func TestSchedulerModule(*testing.T) {
 	//Define input
 	var mockStates [dt.ElevatorCount]dt.ElevatorState
 	var mockOrders [dt.ElevatorCount]dt.OrderMatrixType
+	mockOrders[0][0][0] = dt.New
+	mockOrders[1][0][0] = dt.New
+	mockOrders[1][1][0] = dt.New
+	mockOrders[1][2][0] = dt.Accepted
+	fmt.Println(mockOrders)
 
-	mockOrders[0] = [dt.Accepted dt.Accepted dt.Accepted ],[dt.Accepted dt.Accepted dt.Accepted],[dt.Accepted dt.Accepted dt.Accepted]
-	
 	mockStates[0].IsFunctioning = true
+	mockStates[0].MovingDirection = dt.MovingUp
+	mockStates[0].Floor = 1
 
-	go func() {
-		elevatorStatesCh <- mockStates
-		orderMatricesCh <- mockOrders
-		time.Sleep(10 * time.Millisecond)
-		newOrderIOCh <- dt.OrderType{Button: dt.BtnHallUp, Floor: 1}
-		time.Sleep(10 * time.Millisecond)
-		newOrderSHCh <- dt.OrderType{Button: dt.BtnHallDown, Floor: 3}
-	}()
+
+
+	elevatorStatesCh <- mockStates
+	orderMatricesCh <- mockOrders
+	time.Sleep(10 * time.Millisecond)
+	newOrderIOCh <- dt.OrderType{Button: dt.BtnHallUp, Floor: 1}
+	time.Sleep(10 * time.Millisecond)
+	newOrderSHCh <- dt.OrderType{Button: dt.BtnHallDown, Floor: 3}
+
 
 	updateOrderMatrices := <-updateOrderMatricesCh
 	fmt.Println(updateOrderMatrices)
 
 	updateOrderMatrices = <-updateOrderMatricesCh
 	fmt.Println(updateOrderMatrices)
-	
+
 }

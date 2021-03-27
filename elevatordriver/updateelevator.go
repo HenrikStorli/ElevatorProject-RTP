@@ -26,7 +26,7 @@ func updateOnNewAcceptedOrder(order dt.OrderType, elevator dt.ElevatorState, ord
 		case dt.Error:
 
 		default:
-		
+
 		}
 		return orderMatrix, elevator
 }
@@ -54,14 +54,14 @@ func updateOnDoorClosing(elevator dt.ElevatorState, orderMatrix OrderMatrixBool)
 		switch(elevator.State){
 		case dt.DoorOpen:
 				elevator.MovingDirection = ChooseDirection(elevator, orderMatrix)
-				
+
 				if elevator.MovingDirection == dt.MovingStopped {
 						elevator.State = dt.Idle
 				} else {
 						elevator.State = dt.Moving
 				}
 		default:
-		}	
+		}
 		return elevator
 }
 
@@ -70,7 +70,7 @@ func ElevatorShouldStop(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) 
 				return true
 
 		} else if anyOrdersInTravelingDirectionAtCurrentFloor(elevator, orderMatrix) {
-				return true 
+				return true
 
 		} else if anyOrdersAtCurrentFloor(elevator, orderMatrix ) {
 				if elevator.MovingDirection == dt.MovingUp || !anyOrdersAbove(elevator, orderMatrix){
@@ -79,8 +79,12 @@ func ElevatorShouldStop(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) 
 				} else if elevator.MovingDirection == dt.MovingDown || !anyOrdersBelow(elevator, orderMatrix) {
 						return true
 				}
+		} else if elevator.Floor == dt.FloorCount - 1{
+				return true
+		} else if elevator.Floor == 0 {
+				return true
 		}
-		return false 
+		return false
 }
 
 func ChooseDirection(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) dt.MoveDirectionType {
@@ -111,5 +115,5 @@ func ChooseDirection(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) dt.
 				}
 		default:
 				return dt.MovingStopped
-		}	
+		}
 }
