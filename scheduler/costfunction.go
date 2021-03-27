@@ -8,6 +8,7 @@ import (
 const (
 	TRAVEL_TIME    int = 4
 	DOOR_OPEN_TIME     = 3
+	MAX_TRIES          = 100
 )
 
 func TimeToIdle(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType) int {
@@ -42,8 +43,10 @@ func TimeToIdle(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType) int {
 		elevator.Floor += int(elevator.MovingDirection)
 		////fmt.Printf("Elevator floor is: %v ", elevator.Floor)
 		duration += TRAVEL_TIME
+		if duration/TRAVEL_TIME > MAX_TRIES {
+			return duration
+		}
 	}
-	return duration
 }
 
 func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.OrderMatrixBool {
