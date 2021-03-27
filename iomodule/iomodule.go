@@ -7,6 +7,11 @@ import (
 	"./elevio"
 )
 
+type ButtonLampType struct {
+	Order  dt.OrderType
+	TurnOn bool
+}
+
 func RunIOModule(
 	port int,
 	//Input
@@ -14,6 +19,7 @@ func RunIOModule(
 	floorIndicatorCh <-chan int,
 	doorOpenCh <-chan bool,
 	stopLampCh <-chan bool,
+	buttonLampCh <-chan ButtonLampType,
 
 	//Output
 	buttonEventCh chan<- dt.OrderType,
@@ -34,6 +40,8 @@ func RunIOModule(
 		select {
 		case motorDir := <-motorDirCh:
 			elevio.SetMotorDirection(motorDir)
+		case buttonLamp := <-buttonLampCh:
+			elevio.SetButtonLamp(buttonLamp.Order.Button, buttonLamp.Order.Floor, buttonLamp.TurnOn)
 		case floorIndicator := <-floorIndicatorCh:
 			elevio.SetFloorIndicator(floorIndicator)
 		case doorOpen := <-doorOpenCh:

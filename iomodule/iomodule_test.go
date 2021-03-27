@@ -19,12 +19,14 @@ func TestRunIOModule(*testing.T) {
 	floorSensorCh := make(chan int)
 	stopBtnCh := make(chan bool)
 	obstructionSwitchCh := make(chan bool)
+	buttonLampCh := make(chan iomodule.ButtonLampType)
 
 	go iomodule.RunIOModule(
 		motorDirCh,
 		floorIndicatorCh,
 		doorOpenCh,
 		stopLampCh,
+		buttonLampCh,
 		buttonEventCh,
 		floorSensorCh,
 		stopBtnCh,
