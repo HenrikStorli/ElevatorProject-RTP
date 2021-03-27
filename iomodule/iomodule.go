@@ -1,16 +1,25 @@
 package iomodule
 
 import (
+	"strconv"
+
 	dt "../datatypes"
 	"./elevio"
 )
 
+type ButtonLampType struct {
+	Order  dt.OrderType
+	TurnOn bool
+}
+
 func RunIOModule(
+	port int,
 	//Input
 	motorDirCh <-chan dt.MoveDirectionType,
 	floorIndicatorCh <-chan int,
 	doorOpenCh <-chan bool,
 	stopLampCh <-chan bool,
+	buttonLampCh <-chan ButtonLampType,
 
 	//Output
 	buttonEventCh chan<- dt.OrderType,
@@ -19,7 +28,8 @@ func RunIOModule(
 	obstructionSwitchCh chan<- bool,
 
 ) {
-	elevio.Init("localhost:15657", dt.FloorCount)
+	portString := strconv.Itoa(port)
+	elevio.Init("localhost:"+portString, dt.FloorCount)
 
 	go elevio.PollButtons(buttonEventCh)
 	go elevio.PollFloorSensor(floorSensorCh)
@@ -30,6 +40,8 @@ func RunIOModule(
 		select {
 		case motorDir := <-motorDirCh:
 			elevio.SetMotorDirection(motorDir)
+		case buttonLamp := <-buttonLampCh:
+			elevio.SetButtonLamp(buttonLamp.Order.Button, buttonLamp.Order.Floor, buttonLamp.TurnOn)
 		case floorIndicator := <-floorIndicatorCh:
 			elevio.SetFloorIndicator(floorIndicator)
 		case doorOpen := <-doorOpenCh:
