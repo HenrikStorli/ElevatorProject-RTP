@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	dt "../datatypes"
-	"fmt"
 )
 
 func RunOrdersScheduler(
@@ -43,8 +42,13 @@ func placeOrder(
 	elevatorStates [dt.ElevatorCount]dt.ElevatorState,
 	orderMatrices [dt.ElevatorCount]dt.OrderMatrixType,
 ) [dt.ElevatorCount]dt.OrderMatrixType {
+<<<<<<< HEAD
 	updatedOrderMatrices := orderMatrices
 	fmt.Println("In placeOrder")
+=======
+	var updatedOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType
+
+>>>>>>> main
 	fastestElevatorIndex := findFastestElevator(elevatorStates, orderMatrices)
 
 	updatedOrderMatrices[fastestElevatorIndex][newOrder.Button][newOrder.Floor] = dt.New
