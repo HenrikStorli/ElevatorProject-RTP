@@ -42,7 +42,7 @@ func RunStateHandlerModule(elevatorID int,
 			updatedOrderMatrices := updateOrders(newOrderMatrices, orderMatrices)
 
 			updatedOrderMatrices = replaceNewOrders(elevatorID, updatedOrderMatrices)
-			fmt.Printf("modified matrix %v \n", updatedOrderMatrices)
+			//fmt.Printf("modified matrix %v \n", updatedOrderMatrices)
 
 			go sendAcceptedOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)

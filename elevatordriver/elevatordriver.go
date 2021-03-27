@@ -51,6 +51,8 @@ func RunStateMachine(elevatorID int,
 		elevator.MovingDirection = dt.MovingStopped
 		elevator.State = dt.Idle
 		elevator.IsFunctioning = true
+		driverStateUpdateCh <- elevator
+
 		// Run State machine
 		for {
 				select {
@@ -99,7 +101,7 @@ func RunStateMachine(elevatorID int,
 						} else {
 								doorOpenCh <- CLOSE_DOOR
 								newElevator := updateOnDoorClosing(elevator, orderMatrix)
-
+								motorDirectionCh <- newElevator.MovingDirection
 								elevator = newElevator
 						}
 
