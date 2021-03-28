@@ -85,7 +85,6 @@ func main() {
 		newOrderCh,
 		driverStateUpdateCh,
 		acceptedOrderCh, completedOrderFloorCh,
-		buttonLampCh,
 	)
 
 	go elevatordriver.RunStateMachine(
@@ -102,6 +101,7 @@ func main() {
 		newOrderCh,
 		stateUpdateCh, orderUpdateCh,
 		scheduledOrdersCh,
+		buttonLampCh,
 	)
 
 	for {
