@@ -40,17 +40,20 @@ func RunStateHandlerModule(elevatorID int,
 	var elevatorStates [dt.ElevatorCount]dt.ElevatorState
 	var connectedElevators [dt.ElevatorCount]connectionState
 
+	var timeoutCh chan bool = make(chan bool)
+
 	for {
 		select {
 		case newOrderMatrices := <-incomingOrderCh:
 
 			updatedOrderMatrices := updateIncomingOrders(newOrderMatrices, orderMatrices)
 
-			updatedOrderMatrices = replaceNewOrders(elevatorID, updatedOrderMatrices, false)
+			updatedOrderMatrices = ackNewOrders(elevatorID, updatedOrderMatrices, false)
 
-			go sendAcceptedOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
-			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
-
+			if updatedOrderMatrices != orderMatrices {
+				updatedOrderMatrices = acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
+				outgoingOrderCh <- updatedOrderMatrices
+			}
 			orderMatrices = updatedOrderMatrices
 
 		case newOrders := <-newOrdersCh:
@@ -59,13 +62,15 @@ func RunStateHandlerModule(elevatorID int,
 
 			//If the elevator is single, skip the acknowlegdement step and accept new orders directly
 			if isSingleElevator(elevatorID, connectedElevators) {
-				updatedOrderMatrices = replaceNewOrders(elevatorID, updatedOrderMatrices, true)
-				go sendAcceptedOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
-				go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
+				updatedOrderMatrices = ackNewOrders(elevatorID, updatedOrderMatrices, true)
+
+				acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
 
 			}
 
-			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
+			if updatedOrderMatrices != orderMatrices {
+				outgoingOrderCh <- updatedOrderMatrices
+			}
 
 			orderMatrices = updatedOrderMatrices
 
@@ -91,56 +96,71 @@ func RunStateHandlerModule(elevatorID int,
 
 			updatedOrderMatrices := completeOrders(elevatorID, completedOrderFloor, orderMatrices)
 
-			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
+			if updatedOrderMatrices != orderMatrices {
+				outgoingOrderCh <- updatedOrderMatrices
+			}
 
 			orderMatrices = updatedOrderMatrices
 
 		case connectingElevatorID := <-connectingElevatorIDCh:
+			if !isConnected(connectingElevatorID, connectedElevators) {
+				updatedConnectedElevators := updateConnectedElevatorList(connectingElevatorID, Connected, connectedElevators)
 
-			updatedConnectedElevators := updateConnectedElevatorList(connectingElevatorID, Connected, connectedElevators)
+				indexID := elevatorID - 1
+				ownState := elevatorStates[indexID]
 
-			indexID := elevatorID - 1
-			ownState := elevatorStates[indexID]
+				go sendOwnStateUpdate(ownState, outgoingStateCh)
 
-			go sendOwnStateUpdate(ownState, outgoingStateCh)
+				outgoingOrderCh <- orderMatrices
 
-			go sendOrderUpdate(orderMatrices, orderUpdateCh, outgoingOrderCh)
-
-			connectedElevators = updatedConnectedElevators
-
-		case disconnectingElevatorID := <-disconnectingElevatorIDCh:
-
-			updatedConnectedElevators := updateConnectedElevatorList(disconnectingElevatorID, Disconnected, connectedElevators)
-
-			//Remove existing hall calls
-			updatedOrderMatrices := removeRedirectedOrders(disconnectingElevatorID, orderMatrices)
-			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
-
-			if disconnectingElevatorID == elevatorID {
-				//Business as usual
-			} else {
-
-				updatedStates := updateStateOfDisconnectingElevator(disconnectingElevatorID, elevatorStates)
-
-				//Send state and orders to order scheduler before sending the redirected orders
-				go sendStateUpdate(updatedStates, stateUpdateCh)
-
-				//Sends redirected orders to orderscheduler after state and order update
-				go redirectOrders(disconnectingElevatorID, orderMatrices, redirectedOrderCh)
-
-				orderMatrices = updatedOrderMatrices
-				elevatorStates = updatedStates
-
+				connectedElevators = updatedConnectedElevators
 			}
 
-			connectedElevators = updatedConnectedElevators
+		case disconnectingElevatorID := <-disconnectingElevatorIDCh:
+			if isConnected(disconnectingElevatorID, connectedElevators) {
+
+				updatedConnectedElevators := updateConnectedElevatorList(disconnectingElevatorID, Disconnected, connectedElevators)
+				updatedStates := elevatorStates
+				//Remove existing hall calls
+				updatedOrderMatrices := removeRedirectedOrders(disconnectingElevatorID, orderMatrices)
+				orderUpdateCh <- orderMatrices
+
+				if disconnectingElevatorID == elevatorID {
+					//Business as usual
+				} else {
+
+					updatedStates = updateStateOfDisconnectingElevator(disconnectingElevatorID, elevatorStates)
+
+					//Send state and orders to order scheduler before sending the redirected orders
+					go sendStateUpdate(updatedStates, stateUpdateCh)
+
+					//Sends redirected orders to orderscheduler after state and order update
+					go redirectOrders(disconnectingElevatorID, orderMatrices, redirectedOrderCh)
+
+				}
+
+				if updatedOrderMatrices != orderMatrices {
+					outgoingOrderCh <- updatedOrderMatrices
+				}
+
+				connectedElevators = updatedConnectedElevators
+				orderMatrices = updatedOrderMatrices
+				elevatorStates = updatedStates
+			}
+
+		case timeout := <-timeoutCh:
+			if timeout {
+
+			} else {
+				// All good, pass
+			}
 		}
+		orderUpdateCh <- orderMatrices
 	}
 }
 
 func sendOrderUpdate(newOrders [dt.ElevatorCount]dt.OrderMatrixType, orderUpdateCh chan<- [dt.ElevatorCount]dt.OrderMatrixType, outgoingOrderCh chan<- [dt.ElevatorCount]dt.OrderMatrixType) {
-	go func() { orderUpdateCh <- newOrders }()
-	go func() { outgoingOrderCh <- newOrders }()
+	outgoingOrderCh <- newOrders
 }
 
 func sendStateUpdate(newStates [dt.ElevatorCount]dt.ElevatorState, stateUpdateCh chan<- [dt.ElevatorCount]dt.ElevatorState) {

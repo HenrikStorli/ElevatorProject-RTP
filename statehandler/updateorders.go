@@ -6,19 +6,35 @@ import (
 	dt "../datatypes"
 )
 
-func replaceNewOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, singleElevator bool) [dt.ElevatorCount]dt.OrderMatrixType {
+func ackNewOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, singleElevator bool) [dt.ElevatorCount]dt.OrderMatrixType {
+	ownIndexID := elevatorID - 1
+	updatedOrderMatrices := newOrderMatrices
+
+	for indexID := range newOrderMatrices {
+		if indexID != ownIndexID || singleElevator {
+			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.New, dt.Acknowledged, updatedOrderMatrices[indexID])
+			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.Completed, dt.None, updatedOrderMatrices[indexID])
+		}
+	}
+	return updatedOrderMatrices
+}
+
+func acceptAndSendOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, acceptedOrderCh chan<- dt.OrderType) [dt.ElevatorCount]dt.OrderMatrixType {
 	indexID := elevatorID - 1
 	updatedOrderMatrices := newOrderMatrices
 
-	for ID := range newOrderMatrices {
-		if ID != indexID || singleElevator {
-			updatedOrderMatrices[ID] = replaceExistingOrders(dt.New, dt.Acknowledged, updatedOrderMatrices[ID])
-			updatedOrderMatrices[ID] = replaceExistingOrders(dt.Completed, dt.None, updatedOrderMatrices[ID])
-		}
-		if ID == indexID {
-			updatedOrderMatrices[ID] = replaceExistingOrders(dt.Acknowledged, dt.Accepted, updatedOrderMatrices[ID])
+	for rowIndex, row := range newOrderMatrices[indexID] {
+		btn := dt.ButtonType(rowIndex)
+		for floor, newOrder := range row {
+			if newOrder == dt.Acknowledged {
+				updatedOrderMatrices[indexID][rowIndex][floor] = dt.Accepted
+
+				acceptedOrder := dt.OrderType{Button: btn, Floor: floor}
+				go func() { acceptedOrderCh <- acceptedOrder }()
+			}
 		}
 	}
+
 	return updatedOrderMatrices
 }
 
@@ -162,4 +178,13 @@ func isSingleElevator(elevatorID int, connectedElevators [dt.ElevatorCount]conne
 		}
 	}
 	return true
+}
+
+func isConnected(disconnectingElevatorID int, connectedElevators [dt.ElevatorCount]connectionState) bool {
+	indexID := disconnectingElevatorID - 1
+	if connectedElevators[indexID] == Connected {
+		return true
+	} else {
+		return false
+	}
 }
