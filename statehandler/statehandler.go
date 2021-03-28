@@ -77,15 +77,18 @@ func RunStateHandlerModule(elevatorID int,
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
 			//fmt.Printf("compl %v \n", orderMatrices)
 			orderMatrices = updatedOrderMatrices
+		case <-connectingElevatorIDCh:
+			go sendOwnStateUpdate(elevatorStates[elevatorID-1], outgoingStateCh)
+			go sendOrderUpdate(orderMatrices, orderUpdateCh, outgoingOrderCh)
 
 		case disconnectingElevatorID := <-disconnectingElevatorIDCh:
 			updatedStates := handleDisconnectingElevator(disconnectingElevatorID, elevatorStates)
 			go sendStateUpdate(updatedStates, stateUpdateCh)
 
-			go redirectOrders(disconnectingElevatorID, orderMatrices, redirectedOrderCh)
-
 			updatedOrderMatrices := removeRedirectedOrders(disconnectingElevatorID, orderMatrices)
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
+
+			go redirectOrders(disconnectingElevatorID, orderMatrices, redirectedOrderCh)
 
 			orderMatrices = updatedOrderMatrices
 			//fmt.Printf("disc %v \n", orderMatrices)
@@ -265,7 +268,7 @@ func handleDisconnectingElevator(disconnectingElevatorID int, oldStates [dt.Elev
 	updatedStates := oldStates
 	indexID := disconnectingElevatorID - 1
 	updatedStates[indexID].IsFunctioning = false
-	return oldStates
+	return updatedStates
 }
 
 //Sends hall calls of the disconnecting elevator to the order scheduler
