@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	dt "../datatypes"
+	"../iomodule"
 )
 
 func RunOrdersScheduler(
@@ -12,23 +13,30 @@ func RunOrdersScheduler(
 	elevatorStatesCh <-chan [dt.ElevatorCount]dt.ElevatorState,
 	orderMatricesCh <-chan [dt.ElevatorCount]dt.OrderMatrixType,
 	updateOrderMatricesCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
-
+	//Interface towards iomodule
+	buttonLampCh chan<- iomodule.ButtonLampType,
 ) {
-	var elevatorStatesCopy [dt.ElevatorCount]dt.ElevatorState
-	var orderMatricesCopy [dt.ElevatorCount]dt.OrderMatrixType
+	var elevatorStates [dt.ElevatorCount]dt.ElevatorState
+	var orderMatrices [dt.ElevatorCount]dt.OrderMatrixType
+
+	//Reset all button lamps at init
+	go setButtonLamps(orderMatrices, buttonLampCh)
 
 	for {
 		select {
 		case newOrder := <-newOrderCh:
-			if orderIsNew(newOrder, orderMatricesCopy) {
-				updatedOrderMatrices := placeOrder(elevatorID, newOrder, elevatorStatesCopy, orderMatricesCopy)
+			if orderIsNew(newOrder, orderMatrices) {
+				updatedOrderMatrices := placeOrder(elevatorID, newOrder, elevatorStates, orderMatrices)
 				updateOrderMatricesCh <- updatedOrderMatrices
 			}
 
 		case elevatorStatesUpdate := <-elevatorStatesCh:
-			elevatorStatesCopy = elevatorStatesUpdate
+			elevatorStates = elevatorStatesUpdate
 		case orderMatricesUpdate := <-orderMatricesCh:
-			orderMatricesCopy = orderMatricesUpdate
+
+			go setButtonLamps(orderMatricesUpdate, buttonLampCh)
+
+			orderMatrices = orderMatricesUpdate
 		}
 	}
 }
@@ -109,4 +117,22 @@ func findFastestElevatorServeRquest(elevatorStates [dt.ElevatorCount]dt.Elevator
 		}
 	}
 	return fastestElevatorIndex
+}
+
+func setButtonLamps(newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, buttonLampCh chan<- iomodule.ButtonLampType) {
+
+	for rowIndex, row := range newOrderMatrices[0] {
+		btn := dt.ButtonType(rowIndex)
+		for floor, _ := range row {
+			lampStatus := false
+			order := dt.OrderType{Button: btn, Floor: floor}
+			for _, orderMatrix := range newOrderMatrices {
+				if orderMatrix[rowIndex][floor] == dt.Accepted {
+					lampStatus = true
+				}
+			}
+			buttonLampCh <- iomodule.ButtonLampType{Order: order, TurnOn: lampStatus}
+		}
+	}
+
 }
