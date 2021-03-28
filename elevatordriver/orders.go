@@ -9,12 +9,12 @@ const (
   INACTIVE  = false
 )
 
-func updateOrder(orderMatrix OrderMatrixBool, order dt.OrderType, status bool) OrderMatrixBool {
+func UpdateOrder(orderMatrix OrderMatrixBool, order dt.OrderType, status bool) OrderMatrixBool {
         orderMatrix[order.Button][order.Floor] = status
         return orderMatrix
 }
 
-func ClearOrdersAtCurrentFloor(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) OrderMatrixBool {    
+func ClearOrdersAtCurrentFloor(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) OrderMatrixBool {
         for btnType := 0; btnType < dt.ButtonCount; btnType++ {
                 orderMatrix[btnType][elevator.Floor] = INACTIVE
         }
@@ -41,8 +41,8 @@ func anyOrdersAtCurrentFloor(elevator dt.ElevatorState, orderMatrix OrderMatrixB
         return false
 }
 
-func anyOrdersAbove(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {                   
-        for floor := elevator.Floor + 1; floor < dt.FloorCount; floor++ {      
+func anyOrdersAbove(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {
+        for floor := elevator.Floor + 1; floor < dt.FloorCount; floor++ {
                 for btnType := 0; btnType < dt.ButtonCount; btnType++ {
                         if orderMatrix[btnType][floor] {
                                 return true
@@ -52,7 +52,7 @@ func anyOrdersAbove(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool
         return false
 }
 
-func anyOrdersBelow(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {              
+func anyOrdersBelow(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {
         for floor := elevator.Floor - 1; floor > -1; floor-- {
                 for btnType := 0; btnType < dt.ButtonCount; btnType++ {
                         if orderMatrix[btnType][floor] {

@@ -48,8 +48,8 @@ func placeOrder(
 
 	fmt.Println("In placeOrder")
 
-	fastestElevatorIndex := findFastestElevator(elevatorStates, orderMatrices)
-
+	//fastestElevatorIndex := findFastestElevator(elevatorStates, orderMatrices)
+  fastestElevatorIndex := findFastestElevatorServeRquest(elevatorStates, orderMatrices, newOrder)
 	updatedOrderMatrices[fastestElevatorIndex][newOrder.Button][newOrder.Floor] = dt.New
 
 	return updatedOrderMatrices
@@ -63,6 +63,7 @@ func findFastestElevator(elevatorStates [dt.ElevatorCount]dt.ElevatorState, orde
 		if state.IsFunctioning {
 			fmt.Println("In findFastestElevator inside if isfunctioning statement")
 			executionTime := TimeToIdle(state, orderMatrices[elevatorIndex])
+
 
 			if executionTime < fastestExecutionTime {
 				fastestExecutionTime = executionTime
@@ -86,4 +87,24 @@ func orderIsNew(order dt.OrderType, orderMatrices [dt.ElevatorCount]dt.OrderMatr
 		}
 	}
 	return true
+}
+
+
+// Testing new cost fucntion
+func findFastestElevatorServeRquest(elevatorStates [dt.ElevatorCount]dt.ElevatorState, orderMatrices [dt.ElevatorCount]dt.OrderMatrixType, newOrder dt.OrderType) int {
+	var fastestElevatorIndex int = 0
+	var fastestExecutionTime int = 1000
+	fmt.Println("In findFastestElevator")
+	for elevatorIndex, state := range elevatorStates {
+		if state.IsFunctioning {
+			fmt.Println("In findFastestElevator inside if isfunctioning statement")
+			executionTime := timeToServeRequest(state, orderMatrices[elevatorIndex], newOrder)
+
+			if executionTime < fastestExecutionTime {
+				fastestExecutionTime = executionTime
+				fastestElevatorIndex = elevatorIndex
+			}
+		}
+	}
+	return fastestElevatorIndex
 }
