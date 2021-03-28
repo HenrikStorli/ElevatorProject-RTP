@@ -32,8 +32,8 @@ func main() {
 
 	restartCh := make(chan int)
 
-	newOrdersCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
-	redirectedOrderCh := make(chan dt.OrderType)
+	scheduledOrdersCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
+	newOrderCh := make(chan dt.OrderType)
 
 	outgoingStateCh := make(chan dt.ElevatorState)
 	incomingStateCh := make(chan dt.ElevatorState)
@@ -50,7 +50,6 @@ func main() {
 	stopLampCh := make(chan bool)
 	buttonLampCh := make(chan iomodule.ButtonLampType)
 
-	buttonEventCh := make(chan dt.OrderType)
 	floorSensorCh := make(chan int)
 	stopBtnCh := make(chan bool)
 	obstructionSwitchCh := make(chan bool)
@@ -70,7 +69,7 @@ func main() {
 		doorOpenCh,
 		stopLampCh,
 		buttonLampCh,
-		buttonEventCh,
+		newOrderCh,
 		floorSensorCh,
 		stopBtnCh,
 		obstructionSwitchCh,
@@ -82,8 +81,8 @@ func main() {
 		incomingStateCh, outgoingStateCh,
 		disconnectCh, connectCh,
 		stateUpdateCh, orderUpdateCh,
-		newOrdersCh,
-		redirectedOrderCh,
+		scheduledOrdersCh,
+		newOrderCh,
 		driverStateUpdateCh,
 		acceptedOrderCh, completedOrderFloorCh,
 		buttonLampCh,
@@ -99,9 +98,10 @@ func main() {
 	)
 
 	go scheduler.RunOrdersScheduler(
-		buttonEventCh, redirectedOrderCh,
+		elevatorID,
+		newOrderCh,
 		stateUpdateCh, orderUpdateCh,
-		newOrdersCh,
+		scheduledOrdersCh,
 	)
 
 	for {

@@ -1,13 +1,14 @@
 package scheduler
 
 import (
-	dt "../datatypes"
 	"fmt"
+
+	dt "../datatypes"
 )
 
 func RunOrdersScheduler(
-	newOrderIOCh <-chan dt.OrderType,
-	newOrderSHCh <-chan dt.OrderType,
+	elevatorID int,
+	newOrderCh <-chan dt.OrderType,
 	elevatorStatesCh <-chan [dt.ElevatorCount]dt.ElevatorState,
 	orderMatricesCh <-chan [dt.ElevatorCount]dt.OrderMatrixType,
 	updateOrderMatricesCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
@@ -18,15 +19,9 @@ func RunOrdersScheduler(
 
 	for {
 		select {
-		case newOrder := <-newOrderIOCh:
+		case newOrder := <-newOrderCh:
 			if orderIsNew(newOrder, orderMatricesCopy) {
-				updatedOrderMatrices := placeOrder(newOrder, elevatorStatesCopy, orderMatricesCopy)
-				updateOrderMatricesCh <- updatedOrderMatrices
-			}
-
-		case newOrder := <-newOrderSHCh:
-			if orderIsNew(newOrder, orderMatricesCopy) {
-				updatedOrderMatrices := placeOrder(newOrder, elevatorStatesCopy, orderMatricesCopy)
+				updatedOrderMatrices := placeOrder(elevatorID, newOrder, elevatorStatesCopy, orderMatricesCopy)
 				updateOrderMatricesCh <- updatedOrderMatrices
 			}
 
@@ -39,17 +34,26 @@ func RunOrdersScheduler(
 }
 
 func placeOrder(
+	elevatorID int,
 	newOrder dt.OrderType,
 	elevatorStates [dt.ElevatorCount]dt.ElevatorState,
 	orderMatrices [dt.ElevatorCount]dt.OrderMatrixType,
 ) [dt.ElevatorCount]dt.OrderMatrixType {
 
 	updatedOrderMatrices := orderMatrices
-
-	fmt.Println("In placeOrder")
+	indexID := elevatorID - 1
+	var fastestElevatorIndex int = indexID
+	//fmt.Println("In placeOrder")
 
 	//fastestElevatorIndex := findFastestElevator(elevatorStates, orderMatrices)
-  fastestElevatorIndex := findFastestElevatorServeRquest(elevatorStates, orderMatrices, newOrder)
+
+	//Cab calls are always directed to this elevator
+	if newOrder.Button == dt.BtnCab {
+		fastestElevatorIndex = indexID
+	} else {
+		fastestElevatorIndex = findFastestElevatorServeRquest(elevatorStates, orderMatrices, newOrder)
+	}
+
 	updatedOrderMatrices[fastestElevatorIndex][newOrder.Button][newOrder.Floor] = dt.New
 
 	return updatedOrderMatrices
@@ -64,7 +68,6 @@ func findFastestElevator(elevatorStates [dt.ElevatorCount]dt.ElevatorState, orde
 			fmt.Println("In findFastestElevator inside if isfunctioning statement")
 			executionTime := TimeToIdle(state, orderMatrices[elevatorIndex])
 
-
 			if executionTime < fastestExecutionTime {
 				fastestExecutionTime = executionTime
 				fastestElevatorIndex = elevatorIndex
@@ -74,21 +77,20 @@ func findFastestElevator(elevatorStates [dt.ElevatorCount]dt.ElevatorState, orde
 	return fastestElevatorIndex
 }
 
-func orderIsNew(order dt.OrderType, orderMatrices [dt.ElevatorCount]dt.OrderMatrixType) bool{
-	for elev:= 0; elev < dt.ElevatorCount; elev++ {
-		switch (orderMatrices[elev][order.Button][order.Floor]) {
+func orderIsNew(order dt.OrderType, orderMatrices [dt.ElevatorCount]dt.OrderMatrixType) bool {
+	for elev := 0; elev < dt.ElevatorCount; elev++ {
+		switch orderMatrices[elev][order.Button][order.Floor] {
 		case dt.Accepted:
-				return false
+			return false
 		case dt.New:
-				return false
+			return false
 		case dt.Acknowledged:
-				return false
+			return false
 		default:
 		}
 	}
 	return true
 }
-
 
 // Testing new cost fucntion
 func findFastestElevatorServeRquest(elevatorStates [dt.ElevatorCount]dt.ElevatorState, orderMatrices [dt.ElevatorCount]dt.OrderMatrixType, newOrder dt.OrderType) int {
