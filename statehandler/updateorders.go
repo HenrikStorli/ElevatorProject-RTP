@@ -6,11 +6,12 @@ import (
 	dt "../datatypes"
 )
 
-func replaceNewOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
+func replaceNewOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, singleElevator bool) [dt.ElevatorCount]dt.OrderMatrixType {
 	indexID := elevatorID - 1
 	updatedOrderMatrices := newOrderMatrices
+
 	for ID := range newOrderMatrices {
-		if ID != indexID {
+		if ID != indexID || singleElevator {
 			updatedOrderMatrices[ID] = replaceExistingOrders(dt.New, dt.Acknowledged, updatedOrderMatrices[ID])
 			updatedOrderMatrices[ID] = replaceExistingOrders(dt.Completed, dt.None, updatedOrderMatrices[ID])
 		}
@@ -147,6 +148,18 @@ func removeRedirectedOrders(disconnectingElevatorID int, oldOrderMatrices [dt.El
 func isOrderActive(orderState dt.OrderStateType) bool {
 	if orderState == dt.None || orderState == dt.Completed || orderState == dt.Unknown {
 		return false
+	}
+	return true
+}
+
+func isSingleElevator(elevatorID int, connectedElevators [dt.ElevatorCount]connectionState) bool {
+	ownIndexID := elevatorID - 1
+	for indexID, state := range connectedElevators {
+		if ownIndexID != indexID {
+			if state == Connected {
+				return false
+			}
+		}
 	}
 	return true
 }

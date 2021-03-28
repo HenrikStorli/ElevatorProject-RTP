@@ -7,6 +7,13 @@ import (
 	"../iomodule"
 )
 
+type connectionState bool
+
+const (
+	Connected    connectionState = true
+	Disconnected connectionState = false
+)
+
 //RunStateHandlerModule is...
 func RunStateHandlerModule(elevatorID int,
 	//Interface towards both the network module and order scheduler
@@ -35,6 +42,7 @@ func RunStateHandlerModule(elevatorID int,
 
 	var orderMatrices [dt.ElevatorCount]dt.OrderMatrixType
 	var elevatorStates [dt.ElevatorCount]dt.ElevatorState
+	var connectedElevators [dt.ElevatorCount]connectionState
 
 	for {
 		select {
@@ -42,8 +50,7 @@ func RunStateHandlerModule(elevatorID int,
 
 			updatedOrderMatrices := updateIncomingOrders(newOrderMatrices, orderMatrices)
 
-			updatedOrderMatrices = replaceNewOrders(elevatorID, updatedOrderMatrices)
-			//fmt.Printf("modified matrix %v \n", updatedOrderMatrices)
+			updatedOrderMatrices = replaceNewOrders(elevatorID, updatedOrderMatrices, false)
 
 			go sendAcceptedOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
@@ -54,6 +61,14 @@ func RunStateHandlerModule(elevatorID int,
 		case newOrders := <-newOrdersCh:
 
 			updatedOrderMatrices := updateIncomingOrders(newOrders, orderMatrices)
+
+			//If the elevator is single, skip the acknowlegdement step and accept new orders directly
+			if isSingleElevator(elevatorID, connectedElevators) {
+				updatedOrderMatrices = replaceNewOrders(elevatorID, updatedOrderMatrices, true)
+				go sendAcceptedOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
+				go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
+				go setButtonLamps(updatedOrderMatrices, buttonLampCh)
+			}
 
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
 
@@ -82,10 +97,13 @@ func RunStateHandlerModule(elevatorID int,
 			updatedOrderMatrices := completeOrders(elevatorID, completedOrderFloor, orderMatrices)
 
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
+			go setButtonLamps(updatedOrderMatrices, buttonLampCh)
 
 			orderMatrices = updatedOrderMatrices
 
-		case <-connectingElevatorIDCh:
+		case connectingElevatorID := <-connectingElevatorIDCh:
+
+			updatedConnectedElevators := updateConnectedElevatorList(connectingElevatorID, Connected, connectedElevators)
 
 			indexID := elevatorID - 1
 			ownState := elevatorStates[indexID]
@@ -94,23 +112,35 @@ func RunStateHandlerModule(elevatorID int,
 
 			go sendOrderUpdate(orderMatrices, orderUpdateCh, outgoingOrderCh)
 
+			connectedElevators = updatedConnectedElevators
+
 		case disconnectingElevatorID := <-disconnectingElevatorIDCh:
 
-			updatedStates := updateStateOfDisconnectingElevator(disconnectingElevatorID, elevatorStates)
+			updatedConnectedElevators := updateConnectedElevatorList(disconnectingElevatorID, Disconnected, connectedElevators)
 
+			//Remove existing hall calls
 			updatedOrderMatrices := removeRedirectedOrders(disconnectingElevatorID, orderMatrices)
-
-			//Send state and orders to order scheduler before sending the redirected orders
-			go sendStateUpdate(updatedStates, stateUpdateCh)
-
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
+			go setButtonLamps(updatedOrderMatrices, buttonLampCh)
 
-			//Sends redirected orders to orderscheduler after state and order update
-			go redirectOrders(disconnectingElevatorID, orderMatrices, redirectedOrderCh)
+			if disconnectingElevatorID == elevatorID {
+				//Business as usual
+			} else {
 
-			orderMatrices = updatedOrderMatrices
-			elevatorStates = updatedStates
+				updatedStates := updateStateOfDisconnectingElevator(disconnectingElevatorID, elevatorStates)
 
+				//Send state and orders to order scheduler before sending the redirected orders
+				go sendStateUpdate(updatedStates, stateUpdateCh)
+
+				//Sends redirected orders to orderscheduler after state and order update
+				go redirectOrders(disconnectingElevatorID, orderMatrices, redirectedOrderCh)
+
+				orderMatrices = updatedOrderMatrices
+				elevatorStates = updatedStates
+
+			}
+
+			connectedElevators = updatedConnectedElevators
 		}
 	}
 }
@@ -175,6 +205,15 @@ func updateStateOfDisconnectingElevator(disconnectingElevatorID int, oldStates [
 	indexID := disconnectingElevatorID - 1
 	updatedStates[indexID].IsFunctioning = false
 	return updatedStates
+}
+
+func updateConnectedElevatorList(elevatorID int, newConnectionState connectionState, connectedElevators [dt.ElevatorCount]connectionState) [dt.ElevatorCount]connectionState {
+	updatedList := connectedElevators
+
+	indexID := elevatorID - 1
+	updatedList[indexID] = newConnectionState
+
+	return updatedList
 }
 
 func setButtonLamps(newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, buttonLampCh chan<- iomodule.ButtonLampType) {
