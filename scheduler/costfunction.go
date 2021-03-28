@@ -63,38 +63,36 @@ func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.OrderMatrixBool {
 
 func timeToServeRequest(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType, newOrder dt.OrderType) int{
 	boolOrderMatrix := convertOrderTypeToBool(orderMatrix)
-	boolOrderMatrix = updateOrder(boolOrderMatrix, newOrder, ACTIVE)
-	
+	boolOrderMatrix = ed.UpdateOrder(boolOrderMatrix, newOrder, ed.ACTIVE)
 
-    arrivedAtRequest := 0;
-    duration := 0;
-    
+    duration := 0
+
     switch(elevator.State){
     case dt.Idle:
-        elevator.MovingDirection = ChooseDirection(elevator, boolOrderMatrix);
+        elevator.MovingDirection = ed.ChooseDirection(elevator, boolOrderMatrix)
         if(elevator.MovingDirection == dt.MovingStopped){
             return duration;
         }
         break;
     case dt.Moving:
         duration += TRAVEL_TIME/2;
-        elevator.Floor += elevator.MovingDirection;
+        elevator.Floor += int(elevator.MovingDirection)
         break;
     case dt.DoorOpen:
-        duration -= DOOR_OPEN_TIME/2;
+        duration -= DOOR_OPEN_TIME/2
     }
 
 
-    while(true){
+    for {
         if(ed.ElevatorShouldStop(elevator, boolOrderMatrix)){
-            boolOrderMatrix = ClearOrdersAtCurrentFloor(elevator, boolOrderMatrix) //requests_clearAtCurrentFloor(elevator, ifEqual);
+            boolOrderMatrix = ed.ClearOrdersAtCurrentFloor(elevator, boolOrderMatrix) //requests_clearAtCurrentFloor(elevator, ifEqual);
             if(elevator.Floor == newOrder.Floor){
                 return duration;
             }
             duration += DOOR_OPEN_TIME;
-            elevator.MovingDirection = ChooseDirection(elevator, boolOrderMatrix);
+            elevator.MovingDirection = ed.ChooseDirection(elevator, boolOrderMatrix)
         }
-        elevator.Floor += elevator.direction;
-        duration += TRAVEL_TIME;
+        elevator.Floor += int(elevator.MovingDirection)
+        duration += TRAVEL_TIME
     }
 }
