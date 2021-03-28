@@ -44,6 +44,8 @@ func RunStateHandlerModule(elevatorID int,
 	var elevatorStates [dt.ElevatorCount]dt.ElevatorState
 	var connectedElevators [dt.ElevatorCount]connectionState
 
+	var timeoutCh chan bool = make(chan bool)
+
 	for {
 		select {
 		case newOrderMatrices := <-incomingOrderCh:
@@ -66,8 +68,6 @@ func RunStateHandlerModule(elevatorID int,
 			if isSingleElevator(elevatorID, connectedElevators) {
 				updatedOrderMatrices = replaceNewOrders(elevatorID, updatedOrderMatrices, true)
 				go sendAcceptedOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
-				go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
-				go setButtonLamps(updatedOrderMatrices, buttonLampCh)
 			}
 
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
@@ -141,6 +141,13 @@ func RunStateHandlerModule(elevatorID int,
 			}
 
 			connectedElevators = updatedConnectedElevators
+
+		case timeout := <-timeoutCh:
+			if timeout {
+
+			} else {
+
+			}
 		}
 	}
 }
