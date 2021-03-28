@@ -1,10 +1,8 @@
 package statehandler
 
 import (
-
 	//"fmt"
 	dt "../datatypes"
-	"../iomodule"
 )
 
 type connectionState bool
@@ -36,8 +34,6 @@ func RunStateHandlerModule(elevatorID int,
 	driverStateUpdateCh <-chan dt.ElevatorState,
 	acceptedOrderCh chan<- dt.OrderType,
 	completedOrderFloorCh <-chan int,
-	//Interface towards iomodule
-	buttonLampCh chan<- iomodule.ButtonLampType,
 ) {
 
 	var orderMatrices [dt.ElevatorCount]dt.OrderMatrixType
@@ -54,7 +50,6 @@ func RunStateHandlerModule(elevatorID int,
 
 			go sendAcceptedOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
-			go setButtonLamps(updatedOrderMatrices, buttonLampCh)
 
 			orderMatrices = updatedOrderMatrices
 
@@ -67,7 +62,7 @@ func RunStateHandlerModule(elevatorID int,
 				updatedOrderMatrices = replaceNewOrders(elevatorID, updatedOrderMatrices, true)
 				go sendAcceptedOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
 				go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
-				go setButtonLamps(updatedOrderMatrices, buttonLampCh)
+
 			}
 
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
@@ -97,7 +92,6 @@ func RunStateHandlerModule(elevatorID int,
 			updatedOrderMatrices := completeOrders(elevatorID, completedOrderFloor, orderMatrices)
 
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
-			go setButtonLamps(updatedOrderMatrices, buttonLampCh)
 
 			orderMatrices = updatedOrderMatrices
 
@@ -121,7 +115,6 @@ func RunStateHandlerModule(elevatorID int,
 			//Remove existing hall calls
 			updatedOrderMatrices := removeRedirectedOrders(disconnectingElevatorID, orderMatrices)
 			go sendOrderUpdate(updatedOrderMatrices, orderUpdateCh, outgoingOrderCh)
-			go setButtonLamps(updatedOrderMatrices, buttonLampCh)
 
 			if disconnectingElevatorID == elevatorID {
 				//Business as usual
@@ -214,22 +207,4 @@ func updateConnectedElevatorList(elevatorID int, newConnectionState connectionSt
 	updatedList[indexID] = newConnectionState
 
 	return updatedList
-}
-
-func setButtonLamps(newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, buttonLampCh chan<- iomodule.ButtonLampType) {
-
-	for rowIndex, row := range newOrderMatrices[0] {
-		btn := dt.ButtonType(rowIndex)
-		for floor, _ := range row {
-			lampStatus := false
-			order := dt.OrderType{Button: btn, Floor: floor}
-			for _, orderMatrix := range newOrderMatrices {
-				if orderMatrix[rowIndex][floor] == dt.Accepted {
-					lampStatus = true
-				}
-			}
-			buttonLampCh <- iomodule.ButtonLampType{Order: order, TurnOn: lampStatus}
-		}
-	}
-
 }
