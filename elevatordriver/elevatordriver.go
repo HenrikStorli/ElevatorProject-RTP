@@ -48,10 +48,12 @@ func RunStateMachine(elevatorID int,
 	// Initialize the elevators position
 	select {
 	case newFloor := <-floorSwitchCh:
+		floorIndicatorCh <- newFloor
 		elevator.Floor = newFloor
 	default:
 		motorDirectionCh <- dt.MovingDown
 		newFloor := <-floorSwitchCh
+		floorIndicatorCh <- newFloor
 		elevator.Floor = newFloor
 		motorDirectionCh <- dt.MovingStopped
 	}
