@@ -2,6 +2,8 @@ package statehandler
 
 import (
 	//"fmt"
+	"fmt"
+
 	dt "../datatypes"
 )
 
@@ -64,7 +66,7 @@ func RunStateHandlerModule(elevatorID int,
 			if isSingleElevator(elevatorID, connectedElevators) {
 				updatedOrderMatrices = ackNewOrders(elevatorID, updatedOrderMatrices, true)
 
-				acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
+				updatedOrderMatrices = acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
 
 			}
 
@@ -114,6 +116,8 @@ func RunStateHandlerModule(elevatorID int,
 				outgoingOrderCh <- orderMatrices
 
 				connectedElevators = updatedConnectedElevators
+
+				fmt.Printf("Elevator %d connected \n", connectingElevatorID)
 			}
 
 		case disconnectingElevatorID := <-disconnectingElevatorIDCh:
@@ -121,22 +125,25 @@ func RunStateHandlerModule(elevatorID int,
 
 				updatedConnectedElevators := updateConnectedElevatorList(disconnectingElevatorID, Disconnected, connectedElevators)
 				updatedStates := elevatorStates
-				//Remove existing hall calls
-				updatedOrderMatrices := removeRedirectedOrders(disconnectingElevatorID, orderMatrices)
-				orderUpdateCh <- orderMatrices
+				updatedOrderMatrices := orderMatrices
 
 				if disconnectingElevatorID == elevatorID {
 					//Business as usual
 				} else {
 
-					updatedStates = updateStateOfDisconnectingElevator(disconnectingElevatorID, elevatorStates)
+					//Remove existing hall calls
+					updatedOrderMatrices = removeRedirectedOrders(disconnectingElevatorID, orderMatrices)
+					//Send order update to order scheduler before redirecting orders
+					orderUpdateCh <- updatedOrderMatrices
 
-					//Send state and orders to order scheduler before sending the redirected orders
+					//Send updated state to order scheduler before sending the redirected orders
+					updatedStates = updateStateOfDisconnectingElevator(disconnectingElevatorID, elevatorStates)
 					go sendStateUpdate(updatedStates, stateUpdateCh)
 
 					//Sends redirected orders to orderscheduler after state and order update
 					go redirectOrders(disconnectingElevatorID, orderMatrices, redirectedOrderCh)
 
+					fmt.Printf("Elevator %d disconnected \n", disconnectingElevatorID)
 				}
 
 				if updatedOrderMatrices != orderMatrices {
