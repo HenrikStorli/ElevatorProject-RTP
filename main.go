@@ -27,8 +27,12 @@ func main() {
 	orderUpdateCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
 
 	driverStateUpdateCh := make(chan dt.ElevatorState)
-	acceptedOrderCh := make(chan dt.OrderType)
-	completedOrderFloorCh := make(chan int)
+
+	acceptedOrderSHCh := make(chan statehandler.OrderWithTime)
+	completedFloorEDCh := make(chan int)
+
+	acceptedOrderEDCh := make(chan dt.OrderType)
+	completedFloorSHCh := make(chan int)
 
 	restartCh := make(chan int)
 
@@ -75,6 +79,8 @@ func main() {
 		obstructionSwitchCh,
 	)
 
+	go statehandler.RunOrderWatchdog(acceptedOrderSHCh, acceptedOrderEDCh, completedFloorEDCh, completedFloorSHCh, restartCh)
+
 	go statehandler.RunStateHandlerModule(
 		elevatorID,
 		incomingOrderCh, outgoingOrderCh,
@@ -84,13 +90,13 @@ func main() {
 		scheduledOrdersCh,
 		newOrderCh,
 		driverStateUpdateCh,
-		acceptedOrderCh, completedOrderFloorCh,
+		acceptedOrderSHCh, completedFloorSHCh,
 	)
 
 	go elevatordriver.RunStateMachine(
 		elevatorID,
 		driverStateUpdateCh,
-		completedOrderFloorCh, acceptedOrderCh,
+		completedFloorEDCh, acceptedOrderEDCh,
 		restartCh,
 		floorSensorCh, stopBtnCh, obstructionSwitchCh,
 		floorIndicatorCh, motorDirCh, doorOpenCh, stopLampCh,

@@ -34,15 +34,13 @@ func RunStateHandlerModule(elevatorID int,
 
 	//Interface towards elevator driver
 	driverStateUpdateCh <-chan dt.ElevatorState,
-	acceptedOrderCh chan<- dt.OrderType,
+	acceptedOrderCh chan<- OrderWithTime,
 	completedOrderFloorCh <-chan int,
 ) {
 
 	var orderMatrices [dt.ElevatorCount]dt.OrderMatrixType
 	var elevatorStates [dt.ElevatorCount]dt.ElevatorState
 	var connectedElevators [dt.ElevatorCount]connectionState
-
-	var timeoutCh chan bool = make(chan bool)
 
 	for {
 		select {
@@ -95,7 +93,6 @@ func RunStateHandlerModule(elevatorID int,
 			elevatorStates = updatedStates
 
 		case completedOrderFloor := <-completedOrderFloorCh:
-
 			updatedOrderMatrices := completeOrders(elevatorID, completedOrderFloor, orderMatrices)
 
 			if updatedOrderMatrices != orderMatrices {
@@ -153,13 +150,6 @@ func RunStateHandlerModule(elevatorID int,
 				connectedElevators = updatedConnectedElevators
 				orderMatrices = updatedOrderMatrices
 				elevatorStates = updatedStates
-			}
-
-		case timeout := <-timeoutCh:
-			if timeout {
-
-			} else {
-				// All good, pass
 			}
 		}
 		orderUpdateCh <- orderMatrices
