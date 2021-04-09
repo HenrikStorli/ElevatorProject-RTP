@@ -29,8 +29,15 @@ func acceptAndSendOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.O
 			if newOrder == dt.Acknowledged {
 				updatedOrderMatrices[indexID][rowIndex][floor] = dt.Accepted
 
-				acceptedOrder := dt.OrderType{Button: btn, Floor: floor}
-				go func() { acceptedOrderCh <- acceptedOrder }()
+				order := dt.OrderType{Button: btn, Floor: floor}
+				expectedDuration := time.Minute
+
+				orderWithTime := OrderWithTime{
+					Order:            order,
+					ExpectedDuration: expectedDuration,
+				}
+
+				go func() { acceptedOrderCh <- orderWithTime }()
 			}
 		}
 	}

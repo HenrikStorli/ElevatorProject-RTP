@@ -160,9 +160,7 @@ func checkForPeerUpdates(elevatorID int, networkChannels networkChannelsType, di
 			//TODO: add handling of newly connected peers
 			if peerUpdate.New != "" {
 				newID, _ := strconv.Atoi(peerUpdate.New)
-				if newID != elevatorID {
-					connectingElevatorIDCh <- newID
-				}
+				connectingElevatorIDCh <- newID
 			}
 			//Not sure if we need to handle that the disconnected elevator is THIS elevator here
 			//In any case, send that this elevator disconnected before the others to avoid uneccessary redistribution.
