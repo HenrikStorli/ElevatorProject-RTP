@@ -45,6 +45,9 @@ func RunStateMachine(elevatorID int,
 	//Internal channels
 	doorTimerCh := make(chan bool)
 
+	// Close door at start
+	doorOpenCh <- CLOSE_DOOR
+
 	// Initialize the elevators position
 	select {
 	case newFloor := <-floorSwitchCh:

@@ -8,7 +8,7 @@ import (
 const (
 	TRAVEL_TIME    int = 4
 	DOOR_OPEN_TIME     = 3
-	MAX_TRIES          = 100
+	MAX_TRIES          = 5000
 )
 
 func TimeToIdle(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType) int {
@@ -29,6 +29,7 @@ func TimeToIdle(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType) int {
 		duration -= DOOR_OPEN_TIME / 2
 	default:
 	}
+	tries := 0
 	//fmt.Println("Before For loop in costfunc")
 	for {
 		//fmt.Println("For loop in costfunc")
@@ -43,9 +44,10 @@ func TimeToIdle(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType) int {
 		elevator.Floor += int(elevator.MovingDirection)
 		////fmt.Printf("Elevator floor is: %v ", elevator.Floor)
 		duration += TRAVEL_TIME
-		if duration/TRAVEL_TIME > MAX_TRIES {
+		if tries > MAX_TRIES {
 			return duration
 		}
+		tries += 1
 	}
 }
 
@@ -61,38 +63,42 @@ func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.OrderMatrixBool {
 	return boolMatrix
 }
 
-func timeToServeRequest(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType, newOrder dt.OrderType) int{
+func timeToServeRequest(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType, newOrder dt.OrderType) int {
 	boolOrderMatrix := convertOrderTypeToBool(orderMatrix)
 	boolOrderMatrix = ed.UpdateOrder(boolOrderMatrix, newOrder, ed.ACTIVE)
 
-    duration := 0
+	duration := 0
 
-    switch(elevator.State){
-    case dt.Idle:
-        elevator.MovingDirection = ed.ChooseDirection(elevator, boolOrderMatrix)
-        if(elevator.MovingDirection == dt.MovingStopped){
-            return duration;
-        }
-        break;
-    case dt.Moving:
-        duration += TRAVEL_TIME/2;
-        elevator.Floor += int(elevator.MovingDirection)
-        break;
-    case dt.DoorOpen:
-        duration -= DOOR_OPEN_TIME/2
-    }
+	switch elevator.State {
+	case dt.Idle:
+		elevator.MovingDirection = ed.ChooseDirection(elevator, boolOrderMatrix)
+		if elevator.MovingDirection == dt.MovingStopped {
+			return duration
+		}
+		break
+	case dt.Moving:
+		duration += TRAVEL_TIME / 2
+		elevator.Floor += int(elevator.MovingDirection)
+		break
+	case dt.DoorOpen:
+		duration -= DOOR_OPEN_TIME / 2
+	}
+	tries := 0
+	for {
+		if ed.ElevatorShouldStop(elevator, boolOrderMatrix) {
+			boolOrderMatrix = ed.ClearOrdersAtCurrentFloor(elevator, boolOrderMatrix) //requests_clearAtCurrentFloor(elevator, ifEqual);
+			if elevator.Floor == newOrder.Floor {
+				return duration
+			}
+			duration += DOOR_OPEN_TIME
+			elevator.MovingDirection = ed.ChooseDirection(elevator, boolOrderMatrix)
+		}
+		elevator.Floor += int(elevator.MovingDirection)
+		duration += TRAVEL_TIME
 
-
-    for {
-        if(ed.ElevatorShouldStop(elevator, boolOrderMatrix)){
-            boolOrderMatrix = ed.ClearOrdersAtCurrentFloor(elevator, boolOrderMatrix) //requests_clearAtCurrentFloor(elevator, ifEqual);
-            if(elevator.Floor == newOrder.Floor){
-                return duration;
-            }
-            duration += DOOR_OPEN_TIME;
-            elevator.MovingDirection = ed.ChooseDirection(elevator, boolOrderMatrix)
-        }
-        elevator.Floor += int(elevator.MovingDirection)
-        duration += TRAVEL_TIME
-    }
+		if tries > MAX_TRIES {
+			return duration
+		}
+		tries += 1
+	}
 }
