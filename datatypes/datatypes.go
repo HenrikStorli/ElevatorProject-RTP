@@ -23,7 +23,7 @@ const (
 	BtnCab                 = 2
 )
 
-type MachineStateType int
+type MachineStateType string
 
 type OrderStateType int
 
@@ -54,9 +54,9 @@ type ElevatorState struct {
 }
 
 const (
-	Init MachineStateType = iota
-	Idle 
-	Moving 
-	DoorOpen 
-	Error
+	Init     MachineStateType = "init"
+	Idle     MachineStateType = "idle"
+	Moving   MachineStateType = "moving"
+	DoorOpen MachineStateType = "door open"
+	Error    MachineStateType = "error state"
 )
