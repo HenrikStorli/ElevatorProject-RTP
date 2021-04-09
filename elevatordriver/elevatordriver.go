@@ -38,7 +38,7 @@ func RunStateMachine(elevatorID int,
 		State:           dt.Idle,
 		IsFunctioning:   true,
 	}
-
+	var oldState dt.MachineStateType
 	var orderMatrix OrderMatrixBool
 	var doorObstructed bool
 
@@ -65,8 +65,9 @@ func RunStateMachine(elevatorID int,
 		select {
 		case newAcceptedOrder := <-acceptedOrderCh:
 			newOrderMatrix, newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator, orderMatrix)
-			fmt.Printf("order %v \n", newAcceptedOrder)
-			fmt.Printf("order matrix %v \n", newOrderMatrix)
+
+			fmt.Printf("Accepting Order %v\n", newAcceptedOrder)
+
 			if elevator.State != newElevator.State {
 				if newElevator.State == dt.Moving {
 					motorDirectionCh <- newElevator.MovingDirection
@@ -121,5 +122,11 @@ func RunStateMachine(elevatorID int,
 		// Send updated elevator to statehandler
 
 		driverStateUpdateCh <- elevator // This type does not match the type of the channel
+
+		if elevator.State != oldState {
+			fmt.Printf("STATE: %v  \n", string(elevator.State))
+		}
+
+		oldState = elevator.State
 	}
 }
