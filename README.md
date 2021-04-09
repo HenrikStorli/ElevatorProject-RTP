@@ -14,6 +14,8 @@ Windows:
 To run:
 "go run ./main.go"
 
+To run program with automatic restart
+"go run ./nanny.go"
 
 Summary
 -------
