@@ -3,22 +3,22 @@ package statehandler
 import "time"
 
 //Sends a timeout signal on a timeout channel when the duration has timeout
-func runTimeoutTracker(orderFloor int, timeout time.Duration, completedOrderFloorCh <-chan int, timeoutCh chan<- bool) {
-	var initialTime time.Time = time.Now()
+func runTimeoutTracker(timeout time.Duration, startCh <-chan bool, stopCh <-chan bool, timeoutCh chan<- bool) {
+	var initialTime time.Time
+	var runTimer bool = false
 
 	for {
 		elapsedTime := time.Now().Sub(initialTime)
 
-		if elapsedTime > timeout {
+		if runTimer && elapsedTime > timeout {
 			timeoutCh <- true
-			return
 		}
 		select {
-		case completedOrderFloor := <-completedOrderFloorCh:
-			if orderFloor == completedOrderFloor {
-				timeoutCh <- false
-				return
-			}
+		case <-stopCh:
+			runTimer = false
+		case <-startCh:
+			initialTime = time.Now()
+			runTimer = true
 		}
 
 	}

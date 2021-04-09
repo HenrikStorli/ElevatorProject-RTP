@@ -2,13 +2,16 @@ package elevatordriver
 
 import (
 	"fmt"
-
+	"time"
 	dt "../datatypes"
 )
 
 const (
 	OPEN_DOOR  = true
 	CLOSE_DOOR = false
+
+	TIMER_ON = true
+	TIMER_OFF = false
 )
 
 type OrderMatrixBool [dt.ButtonCount][dt.FloorCount]bool
@@ -19,7 +22,7 @@ func RunStateMachine(elevatorID int,
 	completedOrdersCh chan<- int,
 	//From statehandler
 	acceptedOrderCh <-chan dt.OrderType,
-	restartCh <-chan int,
+	restartCh chan<- int,
 	//From elevio
 	floorSwitchCh <-chan int,
 	stopBtnCh <-chan bool,
@@ -41,9 +44,17 @@ func RunStateMachine(elevatorID int,
 	var oldState dt.MachineStateType
 	var orderMatrix OrderMatrixBool
 	var doorObstructed bool
+	var timeLimit time.Duration = time.Duration(7)*time.Second //seconds
+
 
 	//Internal channels
 	doorTimerCh := make(chan bool)
+	startTimerCh := make(chan bool)
+	stopTimerCh := make(chan bool)
+	timeOutDetectedCh := make(chan bool)
+
+	// Time-out-module in case of motor not working
+	go runTimeOut(timeLimit, startTimerCh, stopTimerCh, timeOutDetectedCh)
 
 	// Close door at start
 	doorOpenCh <- CLOSE_DOOR
@@ -63,6 +74,8 @@ func RunStateMachine(elevatorID int,
 
 	driverStateUpdateCh <- elevator
 
+
+
 	// Run State machine
 	for {
 		select {
@@ -74,6 +87,8 @@ func RunStateMachine(elevatorID int,
 			if elevator.State != newElevator.State {
 				if newElevator.State == dt.Moving {
 					motorDirectionCh <- newElevator.MovingDirection
+					// Start timeout-timer
+					startTimerCh <- TIMER_ON
 
 				} else if newElevator.State == dt.DoorOpen {
 					go startDoorTimer(doorTimerCh)
@@ -94,12 +109,17 @@ func RunStateMachine(elevatorID int,
 			newOrderMatrix, newElevator := updateOnNewFloorArrival(newFloor, elevator, orderMatrix)
 
 			floorIndicatorCh <- newFloor
+			// Stop timout-timer
+			stopTimerCh <- TIMER_OFF
 
 			if newElevator.State == dt.DoorOpen {
 				motorDirectionCh <- dt.MovingStopped
 				doorOpenCh <- OPEN_DOOR
 				go startDoorTimer(doorTimerCh)
 				completedOrdersCh <- newFloor
+			} else {
+				// Start timeout-timer
+				startTimerCh <- TIMER_ON
 			}
 
 			elevator = newElevator
@@ -113,12 +133,19 @@ func RunStateMachine(elevatorID int,
 				doorOpenCh <- CLOSE_DOOR
 				newElevator := updateOnDoorClosing(elevator, orderMatrix)
 				motorDirectionCh <- newElevator.MovingDirection
+
+				if newElevator.MovingDirection != dt.MovingStopped{
+					startTimerCh <- TIMER_ON
+					fmt.Println("Timer is turned on after door closes")
+				}
 				elevator = newElevator
 			}
 
-		case <-restartCh:
 
 		case doorObstructed = <-obstructionSwitchCh:
+
+		case <-timeOutDetectedCh:
+			restartCh <- 1
 
 		case <-stopBtnCh:
 		}
