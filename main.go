@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"time"
+	"fmt"
 
 	dt "./datatypes"
 	"./elevatordriver"
@@ -105,7 +106,10 @@ func main() {
 	)
 
 	for {
-
+			select{
+			case <-restartCh:
+				fmt.Println("Restart detected \n")
+			}
 		time.Sleep(10 * time.Millisecond)
 	}
 
