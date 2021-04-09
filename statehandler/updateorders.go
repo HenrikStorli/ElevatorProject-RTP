@@ -11,10 +11,15 @@ func ackNewOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMat
 	updatedOrderMatrices := newOrderMatrices
 
 	for indexID := range newOrderMatrices {
-		if indexID != ownIndexID || singleElevator {
+		if indexID != ownIndexID {
 			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.New, dt.Acknowledged, updatedOrderMatrices[indexID])
 			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.Completed, dt.None, updatedOrderMatrices[indexID])
+		} else if singleElevator {
+			//We actually want the orders to go from completed to acknowledged when single elevators
+			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.Completed, dt.None, updatedOrderMatrices[indexID])
+			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.New, dt.Acknowledged, updatedOrderMatrices[indexID])
 		}
+
 	}
 	return updatedOrderMatrices
 }

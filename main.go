@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 	"time"
 
 	dt "./datatypes"
@@ -54,6 +56,9 @@ func main() {
 	stopBtnCh := make(chan bool)
 	obstructionSwitchCh := make(chan bool)
 
+	time.Sleep(time.Second)
+	fmt.Println(" Starting modules...")
+
 	go netmodule.RunNetworkModule(
 		elevatorID,
 		ports,
@@ -105,7 +110,10 @@ func main() {
 	)
 
 	for {
-
+		select {
+		case <-restartCh:
+			os.Exit(0)
+		}
 		time.Sleep(10 * time.Millisecond)
 	}
 
