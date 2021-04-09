@@ -2,8 +2,9 @@ package main
 
 import (
 	"flag"
-	"time"
 	"fmt"
+	"os"
+	"time"
 
 	dt "./datatypes"
 	"./elevatordriver"
@@ -54,6 +55,9 @@ func main() {
 	floorSensorCh := make(chan int)
 	stopBtnCh := make(chan bool)
 	obstructionSwitchCh := make(chan bool)
+
+	time.Sleep(time.Second)
+	fmt.Println(" Starting modules...")
 
 	go netmodule.RunNetworkModule(
 		elevatorID,
@@ -106,10 +110,10 @@ func main() {
 	)
 
 	for {
-			select{
-			case <-restartCh:
-				fmt.Println("Restart detected \n")
-			}
+		select {
+		case <-restartCh:
+			os.Exit(0)
+		}
 		time.Sleep(10 * time.Millisecond)
 	}
 
