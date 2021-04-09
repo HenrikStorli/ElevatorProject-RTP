@@ -26,8 +26,9 @@ func RunOrdersScheduler(
 		select {
 		case newOrder := <-newOrderCh:
 			if orderIsNew(elevatorID, newOrder, orderMatrices) {
+				fmt.Printf("New order %v \n", newOrder)
 				updatedOrderMatrices := placeOrder(elevatorID, newOrder, elevatorStates, orderMatrices)
-				updateOrderMatricesCh <- updatedOrderMatrices
+				go func() { updateOrderMatricesCh <- updatedOrderMatrices }()
 			}
 
 		case elevatorStatesUpdate := <-elevatorStatesCh:
