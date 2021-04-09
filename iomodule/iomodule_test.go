@@ -1,6 +1,7 @@
 package iomodule_test
 
 import (
+	"flag"
 	"fmt"
 	"testing"
 
@@ -9,6 +10,8 @@ import (
 )
 
 func TestRunIOModule(*testing.T) {
+
+	_, port := parseFlag()
 
 	motorDirCh := make(chan dt.MoveDirectionType)
 	floorIndicatorCh := make(chan int)
@@ -21,7 +24,7 @@ func TestRunIOModule(*testing.T) {
 	obstructionSwitchCh := make(chan bool)
 	buttonLampCh := make(chan iomodule.ButtonLampType)
 
-	go iomodule.RunIOModule(
+	go iomodule.RunIOModule(port,
 		motorDirCh,
 		floorIndicatorCh,
 		doorOpenCh,
@@ -45,4 +48,13 @@ func TestRunIOModule(*testing.T) {
 			fmt.Printf("Received obstruction switch %v \n", obstructionSwitch)
 		}
 	}
+}
+
+func parseFlag() (int, int) {
+	var elevatorID int
+	var port int
+	flag.IntVar(&elevatorID, "id", 1, "Id of the elevator")
+	flag.IntVar(&port, "port", 15657, "IP port to harware server")
+	flag.Parse()
+	return elevatorID, port
 }
