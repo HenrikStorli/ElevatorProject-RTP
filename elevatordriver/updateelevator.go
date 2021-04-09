@@ -73,10 +73,10 @@ func ElevatorShouldStop(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) 
 				return true
 
 		} else if anyOrdersAtCurrentFloor(elevator, orderMatrix ) {
-				if elevator.MovingDirection == dt.MovingUp || !anyOrdersAbove(elevator, orderMatrix){
+				if (elevator.MovingDirection == dt.MovingUp) && (!anyOrdersAbove(elevator, orderMatrix)){
 						return true
 
-				} else if elevator.MovingDirection == dt.MovingDown || !anyOrdersBelow(elevator, orderMatrix) {
+				} else if (elevator.MovingDirection == dt.MovingDown) && (!anyOrdersBelow(elevator, orderMatrix)) {
 						return true
 				}
 		} else if elevator.Floor == dt.FloorCount - 1{
