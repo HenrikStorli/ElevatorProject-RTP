@@ -32,7 +32,7 @@ func main() {
 		fmt.Println("###         Starting process       ###")
 
 		if runtime.GOOS == "windows" {
-			runningProcess = exec.Command(cmdName+".exe", "call", flagString)
+			runningProcess = exec.Command(cmdName+".exe", flagString)
 		} else {
 			runningProcess = exec.Command(cmdName, flagString)
 		}
