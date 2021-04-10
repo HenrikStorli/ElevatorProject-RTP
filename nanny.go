@@ -24,7 +24,8 @@ func main() {
 
 	elevatorID, port := parseFlag()
 
-	flagString := "--ID " + strconv.Itoa(elevatorID) + " --port " + strconv.Itoa(port)
+	idFlag := "-id"
+	portFlag := "-port"
 
 	var runningProcess *exec.Cmd
 
@@ -32,24 +33,16 @@ func main() {
 		fmt.Println("###         Starting process       ###")
 
 		if runtime.GOOS == "windows" {
-			runningProcess = exec.Command(cmdName+".exe", flagString)
+			runningProcess = exec.Command(cmdName+".exe", idFlag, strconv.Itoa(elevatorID), portFlag, strconv.Itoa(port))
 		} else {
-			runningProcess = exec.Command(cmdName, flagString)
+			runningProcess = exec.Command(cmdName, idFlag, strconv.Itoa(elevatorID), portFlag, strconv.Itoa(port))
 		}
 		fmt.Println(runningProcess)
 		fmt.Println("  ")
 
-		cmdReader, err := runningProcess.StdoutPipe()
-		checkError(err)
+		readIOFromProcess(runningProcess)
 
-		scanner := bufio.NewScanner(cmdReader)
-		go func() {
-			for scanner.Scan() {
-				fmt.Printf("  > %s\n", scanner.Text())
-			}
-		}()
-
-		err = runningProcess.Run()
+		err := runningProcess.Run()
 		checkError(err)
 
 		runningProcess.Wait()
@@ -59,6 +52,24 @@ func main() {
 		time.Sleep(time.Second)
 	}
 
+}
+
+func readIOFromProcess(runningProcess *exec.Cmd) {
+	cmdReaderIO, err := runningProcess.StdoutPipe()
+	checkError(err)
+	cmdReaderErr, err := runningProcess.StderrPipe()
+	checkError(err)
+
+	scannerIO := bufio.NewScanner(cmdReaderIO)
+	scannerErr := bufio.NewScanner(cmdReaderErr)
+	go func() {
+		for scannerIO.Scan() {
+			fmt.Printf("  > %s\n", scannerIO.Text())
+		}
+		for scannerErr.Scan() {
+			fmt.Printf("  > %s\n", scannerErr.Text())
+		}
+	}()
 }
 
 func parseFlag() (int, int) {
