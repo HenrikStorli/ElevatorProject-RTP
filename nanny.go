@@ -16,6 +16,7 @@ const (
 
 func checkError(err error) {
 	if err != nil {
+
 		panic(err)
 	}
 }
@@ -28,6 +29,7 @@ func main() {
 	portFlag := "-port"
 
 	var runningProcess *exec.Cmd
+	restartCh := make(chan bool)
 
 	for {
 		fmt.Println("###         Starting process       ###")
@@ -40,36 +42,61 @@ func main() {
 		fmt.Println(runningProcess)
 		fmt.Println("  ")
 
-		readIOFromProcess(runningProcess)
+		// Copies printouts from main module into shell
+		go readIOFromProcess(runningProcess, restartCh)
 
 		err := runningProcess.Run()
-		checkError(err)
+		_, ok := err.(*exec.ExitError)
+		// Ignore Exit error, we don't want to crash if the main module crash
+		if !ok {
+			checkError(err)
+		} else {
+			fmt.Println(err)
+		}
 
 		runningProcess.Wait()
 
 		fmt.Println("### Process terminated, restarting ###")
+		restartCh <- true
 
 		time.Sleep(time.Second)
 	}
 
 }
 
-func readIOFromProcess(runningProcess *exec.Cmd) {
+func readIOFromProcess(runningProcess *exec.Cmd, restartCh chan bool) {
 	cmdReaderIO, err := runningProcess.StdoutPipe()
 	checkError(err)
 	cmdReaderErr, err := runningProcess.StderrPipe()
 	checkError(err)
 
+	restartCh1 := make(chan bool)
+	restartCh2 := make(chan bool)
+
 	scannerIO := bufio.NewScanner(cmdReaderIO)
 	scannerErr := bufio.NewScanner(cmdReaderErr)
-	go func() {
-		for scannerIO.Scan() {
-			fmt.Printf("  > %s\n", scannerIO.Text())
+	go printFromScanner(scannerIO, restartCh1)
+	go printFromScanner(scannerErr, restartCh2)
+
+	for {
+		select {
+		case <-restartCh:
+			restartCh1 <- true
+			restartCh2 <- true
+			return
 		}
-		for scannerErr.Scan() {
-			fmt.Printf("  > %s\n", scannerErr.Text())
+	}
+}
+
+func printFromScanner(scanner *bufio.Scanner, restartCh chan bool) {
+	for scanner.Scan() {
+		select {
+		case <-restartCh:
+			return
+		default:
+			fmt.Printf("  > %s\n", scanner.Text())
 		}
-	}()
+	}
 }
 
 func parseFlag() (int, int) {
