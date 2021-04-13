@@ -30,8 +30,8 @@ func main() {
 		BcastTxPort: cf.BcastTxPort,
 	}
 
-	stateUpdateCh := make(chan [cf.ElevatorCount]dt.ElevatorState)
-	orderUpdateCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
+	stateUpdateCh := make(chan [cf.ElevatorCount]dt.ElevatorState, 1)
+	orderUpdateCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType, 1)
 
 	driverStateUpdateCh := make(chan dt.ElevatorState)
 	acceptedOrderCh := make(chan dt.OrderType)
@@ -39,7 +39,8 @@ func main() {
 
 	restartCh := make(chan bool)
 
-	scheduledOrdersCh := make(chan dt.OrderType, 1)
+	// Add buffer to prevent deadlock
+	scheduledOrdersCh := make(chan dt.OrderType, 10)
 	buttonCallCh := make(chan dt.OrderType)
 
 	outgoingStateCh := make(chan dt.ElevatorState)
