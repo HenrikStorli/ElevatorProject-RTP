@@ -29,3 +29,9 @@ func runTimeOut(timeLimit time.Duration, startTimerCh <-chan bool, stopTimerCh <
     time.Sleep(10 * time.Millisecond)
   }
 }
+
+
+func startDoorTimer(doorTimerCh chan<- bool){
+  time.Sleep(3000 * time.Millisecond)
+  doorTimerCh <- true
+}
