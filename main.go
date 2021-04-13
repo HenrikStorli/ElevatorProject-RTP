@@ -32,7 +32,7 @@ func main() {
 	acceptedOrderCh := make(chan dt.OrderType)
 	completedOrderFloorCh := make(chan int)
 
-	restartCh := make(chan int)
+	restartCh := make(chan bool)
 
 	scheduledOrdersCh := make(chan dt.OrderType, 1)
 	buttonCallCh := make(chan dt.OrderType)
@@ -43,8 +43,8 @@ func main() {
 	outgoingOrderCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
 	incomingOrderCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
 
-	disconnectCh := make(chan int)
-	connectCh := make(chan int)
+	disconnectCh 	:= make(chan int)
+	connectCh 		:= make(chan int)
 
 	motorDirCh := make(chan dt.MoveDirectionType)
 	floorIndicatorCh := make(chan int)
