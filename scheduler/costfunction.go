@@ -1,21 +1,15 @@
 package scheduler
 
 import (
+	cf "../config"
 	dt "../datatypes"
 	ed "../elevatordriver"
 )
 
-const (
-	TRAVEL_TIME    int = 4
-	DOOR_OPEN_TIME     = 3
-	MAX_TRIES          = 5000
-)
-
-
 func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.OrderMatrixBool {
 	var boolMatrix ed.OrderMatrixBool
-	for floor := 0; floor < dt.FloorCount; floor++ {
-		for btnType := 0; btnType < dt.ButtonCount; btnType++ {
+	for floor := 0; floor < cf.FloorCount; floor++ {
+		for btnType := 0; btnType < cf.ButtonCount; btnType++ {
 			if orderMatrix[btnType][floor] == dt.Accepted {
 				boolMatrix[btnType][floor] = ed.ACTIVE
 			}
@@ -38,11 +32,11 @@ func timeToServeRequest(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixTyp
 		}
 		break
 	case dt.Moving:
-		duration += TRAVEL_TIME / 2
+		duration += cf.TravelTime / 2
 		elevator.Floor += int(elevator.MovingDirection)
 		break
 	case dt.DoorOpen:
-		duration -= DOOR_OPEN_TIME / 2
+		duration -= cf.DoorOpenTime / 2
 	}
 	tries := 0
 	for {
@@ -51,13 +45,13 @@ func timeToServeRequest(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixTyp
 			if elevator.Floor == newOrder.Floor {
 				return duration
 			}
-			duration += DOOR_OPEN_TIME
+			duration += cf.DoorOpenTime
 			elevator.MovingDirection = ed.ChooseDirection(elevator, boolOrderMatrix)
 		}
 		elevator.Floor += int(elevator.MovingDirection)
-		duration += TRAVEL_TIME
+		duration += cf.TravelTime
 
-		if tries > MAX_TRIES {
+		if tries > cf.MaxTries {
 			return duration
 		}
 		tries += 1

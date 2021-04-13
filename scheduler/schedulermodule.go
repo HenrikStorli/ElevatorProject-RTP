@@ -3,6 +3,7 @@ package scheduler
 import (
 	"fmt"
 
+	cf "../config"
 	dt "../datatypes"
 	"../iomodule"
 )
@@ -10,14 +11,14 @@ import (
 func RunOrdersScheduler(
 	elevatorID int,
 	newOrderCh <-chan dt.OrderType,
-	elevatorStatesCh <-chan [dt.ElevatorCount]dt.ElevatorState,
-	orderMatricesCh <-chan [dt.ElevatorCount]dt.OrderMatrixType,
-	updateOrderMatricesCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
+	elevatorStatesCh <-chan [cf.ElevatorCount]dt.ElevatorState,
+	orderMatricesCh <-chan [cf.ElevatorCount]dt.OrderMatrixType,
+	newScheduledOrderCh chan<- dt.OrderType,
 	//Interface towards iomodule
 	buttonLampCh chan<- iomodule.ButtonLampType,
 ) {
-	var elevatorStates [dt.ElevatorCount]dt.ElevatorState
-	var orderMatrices [dt.ElevatorCount]dt.OrderMatrixType
+	var elevatorStates [cf.ElevatorCount]dt.ElevatorState
+	var orderMatrices [cf.ElevatorCount]dt.OrderMatrixType
 
 	//Reset all button lamps at init
 	go setButtonLamps(elevatorID, orderMatrices, buttonLampCh)
@@ -26,9 +27,9 @@ func RunOrdersScheduler(
 		select {
 		case newOrder := <-newOrderCh:
 			if orderIsNew(elevatorID, newOrder, orderMatrices) {
-				fmt.Printf("New order %v \n", newOrder)
-				updatedOrderMatrices := placeOrder(elevatorID, newOrder, elevatorStates, orderMatrices)
-				go func() { updateOrderMatricesCh <- updatedOrderMatrices }()
+
+				scheduledOrder := placeOrder(elevatorID, newOrder, elevatorStates, orderMatrices)
+				newScheduledOrderCh <- scheduledOrder
 			}
 
 		case elevatorStatesUpdate := <-elevatorStatesCh:
@@ -45,55 +46,37 @@ func RunOrdersScheduler(
 func placeOrder(
 	elevatorID int,
 	newOrder dt.OrderType,
-	elevatorStates [dt.ElevatorCount]dt.ElevatorState,
-	orderMatrices [dt.ElevatorCount]dt.OrderMatrixType,
-) [dt.ElevatorCount]dt.OrderMatrixType {
+	elevatorStates [cf.ElevatorCount]dt.ElevatorState,
+	orderMatrices [cf.ElevatorCount]dt.OrderMatrixType,
+) dt.OrderType {
 
-	updatedOrderMatrices := orderMatrices
-	indexID := elevatorID - 1
-	var fastestElevatorIndex int = indexID
+	var scheduledOrder dt.OrderType = newOrder
+
+	var fastestElevatorIndex int = elevatorID
 	//fmt.Println("In placeOrder")
 
 	//fastestElevatorIndex := findFastestElevator(elevatorStates, orderMatrices)
 
 	//Cab calls are always directed to this elevator
 	if newOrder.Button == dt.BtnCab {
-		fastestElevatorIndex = indexID
+		fastestElevatorIndex = elevatorID
 	} else {
 		fastestElevatorIndex = findFastestElevator(elevatorStates, orderMatrices, newOrder)
 	}
 
-	updatedOrderMatrices[fastestElevatorIndex][newOrder.Button][newOrder.Floor] = dt.New
+	scheduledOrder.ElevatorID = fastestElevatorIndex
 
 	fmt.Printf("Directing Order %v to elevator %d \n", newOrder, fastestElevatorIndex+1)
 
-	return updatedOrderMatrices
+	return scheduledOrder
 }
 
-func findFastestElevator(elevatorStates [dt.ElevatorCount]dt.ElevatorState, orderMatrices [dt.ElevatorCount]dt.OrderMatrixType) int {
-	var fastestElevatorIndex int = 0
-	var fastestExecutionTime int = 1000
 
-	for elevatorIndex, state := range elevatorStates {
-		if state.IsFunctioning {
-
-			executionTime := TimeToIdle(state, orderMatrices[elevatorIndex])
-
-			if executionTime < fastestExecutionTime {
-				fastestExecutionTime = executionTime
-				fastestElevatorIndex = elevatorIndex
-			}
-		}
-	}
-	return fastestElevatorIndex
-}
-
-func orderIsNew(elevatorID int, order dt.OrderType, orderMatrices [dt.ElevatorCount]dt.OrderMatrixType) bool {
-	ownIndexID := elevatorID - 1
+func orderIsNew(elevatorID int, order dt.OrderType, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType) bool {
 
 	for indexID := range orderMatrices {
 		//Ignore cab calls from different elevators
-		if order.Button == dt.BtnCab && ownIndexID != indexID {
+		if order.Button == dt.BtnCab && elevatorID != indexID {
 			continue
 		}
 		switch orderMatrices[indexID][order.Button][order.Floor] {
@@ -110,7 +93,7 @@ func orderIsNew(elevatorID int, order dt.OrderType, orderMatrices [dt.ElevatorCo
 }
 
 // Testing new cost fucntion
-func findFastestElevator(elevatorStates [dt.ElevatorCount]dt.ElevatorState, orderMatrices [dt.ElevatorCount]dt.OrderMatrixType, newOrder dt.OrderType) int {
+func findFastestElevator(elevatorStates [cf.ElevatorCount]dt.ElevatorState, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType, newOrder dt.OrderType) int {
 	var fastestElevatorIndex int = 0
 	var fastestExecutionTime int = 1000
 
@@ -128,9 +111,7 @@ func findFastestElevator(elevatorStates [dt.ElevatorCount]dt.ElevatorState, orde
 	return fastestElevatorIndex
 }
 
-func setButtonLamps(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, buttonLampCh chan<- iomodule.ButtonLampType) {
-
-	ownIndexID := elevatorID - 1
+func setButtonLamps(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType, buttonLampCh chan<- iomodule.ButtonLampType) {
 	for rowIndex, row := range newOrderMatrices[0] {
 		btn := dt.ButtonType(rowIndex)
 		for floor, _ := range row {
@@ -139,7 +120,7 @@ func setButtonLamps(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderM
 			for indexID, orderMatrix := range newOrderMatrices {
 
 				//cab calls lights up only on own elevator
-				if btn != dt.BtnCab || ownIndexID == indexID {
+				if btn != dt.BtnCab || elevatorID == indexID {
 					if orderMatrix[rowIndex][floor] == dt.Accepted {
 						lampStatus = true
 					}
@@ -148,5 +129,4 @@ func setButtonLamps(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderM
 			buttonLampCh <- iomodule.ButtonLampType{Order: order, TurnOn: lampStatus}
 		}
 	}
-
 }
