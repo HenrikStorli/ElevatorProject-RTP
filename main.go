@@ -32,8 +32,8 @@ func main() {
 
 	orderMatrixBufferSize := cf.ButtonCount * cf.FloorCount
 
-	stateUpdateCh := make(chan [cf.ElevatorCount]dt.ElevatorState)
-	orderUpdateCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
+	stateUpdateCh := make(chan [cf.ElevatorCount]dt.ElevatorState, 1)
+	orderUpdateCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType, 1)
 
 	driverStateUpdateCh := make(chan dt.ElevatorState, 1)
 	acceptedOrderCh := make(chan dt.OrderType, orderMatrixBufferSize)
