@@ -22,7 +22,7 @@ func RunStateMachine(elevatorID int,
 	completedOrdersCh chan<- int,
 	//From statehandler
 	acceptedOrderCh <-chan dt.OrderType,
-	restartCh chan<- int,
+	restartCh chan<- bool,
 	//From elevio
 	floorSwitchCh <-chan int,
 	stopBtnCh <-chan bool,
@@ -48,10 +48,10 @@ func RunStateMachine(elevatorID int,
 
 
 	//Internal channels
-	doorTimerCh := make(chan bool)
-	startTimerCh := make(chan bool)
-	stopTimerCh := make(chan bool)
-	timeOutDetectedCh := make(chan bool)
+	doorTimerCh  		:= make(chan bool)
+	startTimerCh 		:= make(chan bool)
+	stopTimerCh 		:= make(chan bool)
+	timeOutDetectedCh 	:= make(chan bool)
 
 	// Time-out-module in case of motor not working
 	go runTimeOut(timeLimit, startTimerCh, stopTimerCh, timeOutDetectedCh)
@@ -145,7 +145,7 @@ func RunStateMachine(elevatorID int,
 		case doorObstructed = <-obstructionSwitchCh:
 
 		case <-timeOutDetectedCh:
-			restartCh <- 1
+			restartCh <- true
 
 		case <-stopBtnCh:
 		}
