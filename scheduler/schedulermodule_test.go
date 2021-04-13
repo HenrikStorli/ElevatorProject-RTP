@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	cf "../config"
 	dt "../datatypes"
 	"../iomodule"
 	"../scheduler"
@@ -12,18 +13,18 @@ import (
 
 func TestSchedulerModule(*testing.T) {
 	newOrderCh := make(chan dt.OrderType)
-	elevatorStatesCh := make(chan [dt.ElevatorCount]dt.ElevatorState)
-	orderMatricesCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
-	updateOrderMatricesCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
+	elevatorStatesCh := make(chan [cf.ElevatorCount]dt.ElevatorState)
+	orderMatricesCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
+	updateOrderMatricesCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
 	buttonLampCh := make(chan iomodule.ButtonLampType)
 
-	elevatorID := 1
+	elevatorID := 0
 
 	go scheduler.RunOrdersScheduler(elevatorID, newOrderCh,
 		elevatorStatesCh, orderMatricesCh, updateOrderMatricesCh, buttonLampCh)
 	//Define input
-	var mockStates [dt.ElevatorCount]dt.ElevatorState
-	var mockOrders [dt.ElevatorCount]dt.OrderMatrixType
+	var mockStates [cf.ElevatorCount]dt.ElevatorState
+	var mockOrders [cf.ElevatorCount]dt.OrderMatrixType
 	mockOrders[0][0][0] = dt.New
 	mockOrders[1][0][0] = dt.New
 	mockOrders[1][1][0] = dt.New

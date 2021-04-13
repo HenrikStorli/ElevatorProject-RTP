@@ -3,6 +3,7 @@ package iomodule
 import (
 	"strconv"
 
+	cf "../config"
 	dt "../datatypes"
 	"./elevio"
 )
@@ -29,7 +30,7 @@ func RunIOModule(
 
 ) {
 	portString := strconv.Itoa(port)
-	elevio.Init("localhost:"+portString, dt.FloorCount)
+	elevio.Init("localhost:"+portString, cf.FloorCount)
 
 	go elevio.PollButtons(buttonEventCh)
 	go elevio.PollFloorSensor(floorSensorCh)

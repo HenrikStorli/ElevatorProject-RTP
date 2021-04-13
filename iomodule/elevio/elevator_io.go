@@ -6,13 +6,14 @@ import (
 	"sync"
 	"time"
 
+	cf "../../config"
 	dt "../../datatypes"
 )
 
 const _pollRate = 20 * time.Millisecond
 
 var _initialized bool = false
-var _numFloors int = dt.FloorCount
+var _numFloors int = cf.FloorCount
 var _mtx sync.Mutex
 var _conn net.Conn
 

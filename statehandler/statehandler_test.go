@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	cf "../config"
 	dt "../datatypes"
 	"../statehandler"
 )
@@ -25,11 +26,11 @@ func TestNetworkModule(*testing.T) {
 	outgoingStateCh := make(chan dt.ElevatorState)
 	incomingStateCh := make(chan dt.ElevatorState)
 
-	outgoingOrderCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
-	incomingOrderCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
+	outgoingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
+	incomingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
 
-	stateUpdateCh := make(chan [dt.ElevatorCount]dt.ElevatorState)
-	orderUpdateCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
+	stateUpdateCh := make(chan [cf.ElevatorCount]dt.ElevatorState)
+	orderUpdateCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
 
 	driverStateUpdateCh := make(chan dt.ElevatorState)
 	acceptedOrderCh := make(chan dt.OrderType)
@@ -37,7 +38,7 @@ func TestNetworkModule(*testing.T) {
 
 	disconnectCh := make(chan int)
 	connectCh := make(chan int)
-	newOrdersCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
+	newOrdersCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
 	redirectedOrderCh := make(chan dt.OrderType)
 
 	go statehandler.RunStateHandlerModule(id1, incomingOrderCh, outgoingOrderCh,
@@ -55,7 +56,7 @@ func TestNetworkModule(*testing.T) {
 	fmt.Println("Module is running")
 
 	var mockState dt.ElevatorState
-	var mockOrders [dt.ElevatorCount]dt.OrderMatrixType
+	var mockOrders [cf.ElevatorCount]dt.OrderMatrixType
 	mockOrders[0][0][0] = dt.New
 	mockOrders[1][0][0] = dt.New
 	mockOrders[1][1][0] = dt.New
@@ -64,7 +65,7 @@ func TestNetworkModule(*testing.T) {
 	go func() {
 		for {
 
-			mockState = dt.ElevatorState{ElevatorID: 2, MovingDirection: dt.MovingUp, Floor: 1, State: 1, IsFunctioning: true}
+			mockState = dt.ElevatorState{ElevatorID: 0, MovingDirection: dt.MovingUp, Floor: 1, State: 1, IsFunctioning: true}
 			driverState := dt.ElevatorState{ElevatorID: 1, MovingDirection: dt.MovingDown, Floor: 2, State: 4, IsFunctioning: true}
 
 			incomingStateCh <- mockState

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	cf "../config"
 	dt "../datatypes"
 )
 
@@ -15,7 +16,7 @@ const (
 	TIMER_OFF = false
 )
 
-type OrderMatrixBool [dt.ButtonCount][dt.FloorCount]bool
+type OrderMatrixBool [cf.ButtonCount][cf.FloorCount]bool
 
 func RunStateMachine(elevatorID int,
 	//To statehandler
@@ -45,13 +46,13 @@ func RunStateMachine(elevatorID int,
 	var oldState dt.MachineStateType
 	var orderMatrix OrderMatrixBool
 	var doorObstructed bool
-	var timeLimit time.Duration = time.Duration(7) * time.Second //seconds
+	var timeLimit time.Duration = time.Duration(cf.TimeoutStuckSec) * time.Second //seconds
 
 	//Internal channels
-	doorTimerCh  		:= make(chan bool)
-	startTimerCh 		:= make(chan bool)
-	stopTimerCh 		:= make(chan bool)
-	timeOutDetectedCh 	:= make(chan bool)
+	doorTimerCh := make(chan bool)
+	startTimerCh := make(chan bool)
+	stopTimerCh := make(chan bool)
+	timeOutDetectedCh := make(chan bool)
 
 	// Time-out-module in case of motor not working
 	go runTimeOut(timeLimit, startTimerCh, stopTimerCh, timeOutDetectedCh)
@@ -138,7 +139,8 @@ func RunStateMachine(elevatorID int,
 				elevator = newElevator
 			}
 
-		case doorObstructed = <-obstructionSwitchCh:
+		case obstructedSwitch := <-obstructionSwitchCh:
+			doorObstructed = obstructedSwitch
 
 		case <-timeOutDetectedCh:
 			restartCh <- true
