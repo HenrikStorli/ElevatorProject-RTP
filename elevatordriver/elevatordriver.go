@@ -27,7 +27,7 @@ func RunStateMachine(elevatorID int,
 
 	// To main
 	restartCh chan<- bool,
-	
+
 	// From elevio
 	floorSwitchCh <-chan int,
 	stopBtnCh <-chan bool,
@@ -36,9 +36,9 @@ func RunStateMachine(elevatorID int,
 	floorIndicatorCh chan<- int,
 	motorDirectionCh chan<- dt.MoveDirectionType,
 	doorOpenCh chan<- bool,
-	setStopCh chan<- bool
+	setStopCh chan<- bool,
 ) {
-	
+
 	var elevator dt.ElevatorState = dt.ElevatorState{
 		ElevatorID:      elevatorID,
 		MovingDirection: dt.MovingStopped,
@@ -93,7 +93,7 @@ func RunStateMachine(elevatorID int,
 				switch(newElevator.State){
 				case dt.Moving:
 					motorDirectionCh <- newElevator.MovingDirection
-					startMotorFailTimerCh <- TIMER_ON					
+					startMotorFailTimerCh <- TIMER_ON
 				case dt.DoorOpen:
 					go startDoorTimer(doorTimerCh)
 					doorOpenCh <- OPEN_DOOR
@@ -123,7 +123,7 @@ func RunStateMachine(elevatorID int,
 				doorOpenCh <- OPEN_DOOR
 
 				go startDoorTimer(doorTimerCh)
-				
+
 				completedOrdersCh <- newFloor
 
 			} else {
@@ -161,7 +161,7 @@ func RunStateMachine(elevatorID int,
 		case <-stopBtnCh:
 		}
 
-		driverStateUpdateCh <- elevator 
+		driverStateUpdateCh <- elevator
 
 		if elevator.State != oldState {
 			fmt.Printf("STATE: %v  \n", string(elevator.State))

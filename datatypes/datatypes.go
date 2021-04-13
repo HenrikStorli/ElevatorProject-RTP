@@ -53,7 +53,7 @@ type ElevatorState struct {
 
 const (
 	Init     MachineStateType = "init"
-	Idle 					  = "idle"
-	Moving   				  = "moving"
-	DoorOpen				  = "door open"
+	Idle 					 					  = "idle"
+	Moving   				  				= "moving"
+	DoorOpen				 				  = "door open"
 )
