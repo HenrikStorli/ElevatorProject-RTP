@@ -19,7 +19,7 @@ func main() {
 
 	elevatorID, port := parseFlag()
 
-	if elevatorID < 0 || elevatorID > cf.ElevatorCount-1 {
+	if !netmodule.IsValidID(elevatorID) {
 		panic("Elevator ID is out of bounds")
 	}
 

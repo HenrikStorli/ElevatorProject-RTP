@@ -131,12 +131,17 @@ func receiveNetworkPackage(elevatorID int, networkChannels networkChannelsType,
 			if discardOwnPackages && newPackage.SenderID == elevatorID {
 				continue
 			}
+			//Check if senders ID is correct
+			if IsValidID(newPackage.SenderID) {
+				if newPackage.NewState != nilState {
 
-			if newPackage.NewState != nilState {
-				incomingStateCh <- newPackage.NewState
-			}
-			if newPackage.NewOrderMatrices != nilOrders {
-				incomingOrderCh <- newPackage.NewOrderMatrices
+					if IsValidID(newPackage.NewState.ElevatorID) {
+						incomingStateCh <- newPackage.NewState
+					}
+				}
+				if newPackage.NewOrderMatrices != nilOrders {
+					incomingOrderCh <- newPackage.NewOrderMatrices
+				}
 			}
 			lastPackageReceived = newPackage
 		}
@@ -157,7 +162,10 @@ func checkForPeerUpdates(elevatorID int, networkChannels networkChannelsType, di
 			//TODO: add handling of newly connected peers
 			if peerUpdate.New != "" {
 				newID, _ := strconv.Atoi(peerUpdate.New)
-				connectingElevatorIDCh <- newID
+
+				if IsValidID(newID) {
+					connectingElevatorIDCh <- newID
+				}
 			}
 			//Not sure if we need to handle that the disconnected elevator is THIS elevator here
 			//In any case, send that this elevator disconnected before the others to avoid uneccessary redistribution.
@@ -170,10 +178,17 @@ func checkForPeerUpdates(elevatorID int, networkChannels networkChannelsType, di
 			}
 			for _, lostPeer := range peerUpdate.Lost {
 				lostID, _ := strconv.Atoi(lostPeer)
-				if lostID != elevatorID {
+				if lostID != elevatorID && IsValidID(lostID) {
 					disconnectingElevatorIDCh <- lostID
 				}
 			}
 		}
 	}
+}
+
+func IsValidID(elevatorID int) bool {
+	if elevatorID < 0 && elevatorID > cf.ElevatorCount-1 {
+		return false
+	}
+	return true
 }

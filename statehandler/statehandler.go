@@ -43,8 +43,6 @@ func RunStateHandlerModule(elevatorID int,
 	var elevatorStates [cf.ElevatorCount]dt.ElevatorState
 	var connectedElevators [cf.ElevatorCount]connectionState
 
-	var timeoutCh chan bool = make(chan bool)
-
 	for {
 		select {
 		case newOrderMatrices := <-incomingOrderCh:
@@ -155,12 +153,6 @@ func RunStateHandlerModule(elevatorID int,
 				elevatorStates = updatedStates
 			}
 
-		case timeout := <-timeoutCh:
-			if timeout {
-
-			} else {
-				// All good, pass
-			}
 		}
 		orderUpdateCh <- orderMatrices
 	}
