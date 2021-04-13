@@ -30,23 +30,24 @@ func main() {
 		BcastTxPort: cf.BcastTxPort,
 	}
 
+	orderMatrixBufferSize := cf.ButtonCount * cf.FloorCount
+
 	stateUpdateCh := make(chan [cf.ElevatorCount]dt.ElevatorState, 1)
 	orderUpdateCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType, 1)
 
-	driverStateUpdateCh := make(chan dt.ElevatorState)
-	acceptedOrderCh := make(chan dt.OrderType)
+	driverStateUpdateCh := make(chan dt.ElevatorState, 1)
+	acceptedOrderCh := make(chan dt.OrderType, orderMatrixBufferSize)
 	completedOrderFloorCh := make(chan int)
 
 	restartCh := make(chan bool)
 
-	// Add buffer to prevent deadlock
 	scheduledOrdersCh := make(chan dt.OrderType, 10)
-	buttonCallCh := make(chan dt.OrderType)
+	buttonCallCh := make(chan dt.OrderType, 10)
 
-	outgoingStateCh := make(chan dt.ElevatorState)
+	outgoingStateCh := make(chan dt.ElevatorState, 1)
 	incomingStateCh := make(chan dt.ElevatorState)
 
-	outgoingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
+	outgoingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType, 1)
 	incomingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
 
 	disconnectCh := make(chan int)
@@ -56,7 +57,7 @@ func main() {
 	floorIndicatorCh := make(chan int)
 	doorOpenCh := make(chan bool)
 	stopLampCh := make(chan bool)
-	buttonLampCh := make(chan iomodule.ButtonLampType)
+	buttonLampCh := make(chan iomodule.ButtonLampType, orderMatrixBufferSize)
 
 	floorSensorCh := make(chan int)
 	stopBtnCh := make(chan bool)
