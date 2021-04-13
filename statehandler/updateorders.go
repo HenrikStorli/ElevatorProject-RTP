@@ -36,7 +36,7 @@ func acceptAndSendOrders(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.O
 				updatedOrderMatrices[elevatorID][rowIndex][floor] = dt.Accepted
 
 				acceptedOrder := dt.OrderType{Button: btn, Floor: floor}
-				go func() { acceptedOrderCh <- acceptedOrder }()
+				acceptedOrderCh <- acceptedOrder
 			}
 		}
 	}
@@ -150,8 +150,6 @@ func redirectOrders(disconnectingElevatorID int, oldOrderMatrices [cf.ElevatorCo
 			if isOrderActive(orderState) {
 				order := dt.OrderType{Button: btn, Floor: floor}
 				redirectedOrderCh <- order
-				//Wait a tiny bit to avoiding locking the order scheduler
-				//time.Sleep(time.Millisecond * 1)
 			}
 		}
 	}

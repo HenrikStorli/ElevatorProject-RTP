@@ -79,7 +79,7 @@ func RunStateHandlerModule(elevatorID int,
 
 			updatedStates := updateIncomingStates(elevatorID, newState, elevatorStates)
 
-			go sendStateUpdate(updatedStates, stateUpdateCh)
+			stateUpdateCh <- updatedStates
 
 			elevatorStates = updatedStates
 
@@ -87,9 +87,9 @@ func RunStateHandlerModule(elevatorID int,
 
 			updatedStates := updateOwnState(elevatorID, newDriverStateUpdate, elevatorStates)
 
-			go sendOwnStateUpdate(newDriverStateUpdate, outgoingStateCh)
+			outgoingStateCh <- newDriverStateUpdate
 
-			go sendStateUpdate(updatedStates, stateUpdateCh)
+			stateUpdateCh <- updatedStates
 
 			elevatorStates = updatedStates
 
@@ -109,7 +109,7 @@ func RunStateHandlerModule(elevatorID int,
 
 				ownState := elevatorStates[elevatorID]
 
-				go sendOwnStateUpdate(ownState, outgoingStateCh)
+				outgoingStateCh <- ownState
 
 				outgoingOrderCh <- orderMatrices
 
@@ -136,10 +136,10 @@ func RunStateHandlerModule(elevatorID int,
 
 					//Send updated state to order scheduler before sending the redirected orders
 					updatedStates = updateStateOfDisconnectingElevator(disconnectingElevatorID, elevatorStates)
-					go sendStateUpdate(updatedStates, stateUpdateCh)
+					stateUpdateCh <- updatedStates
 
 					//Sends redirected orders to orderscheduler after state and order update
-					go redirectOrders(disconnectingElevatorID, orderMatrices, redirectedOrderCh)
+					redirectOrders(disconnectingElevatorID, orderMatrices, redirectedOrderCh)
 
 					fmt.Printf("Elevator %d disconnected \n", disconnectingElevatorID)
 				}
@@ -156,18 +156,6 @@ func RunStateHandlerModule(elevatorID int,
 		}
 		orderUpdateCh <- orderMatrices
 	}
-}
-
-func sendOrderUpdate(newOrders [cf.ElevatorCount]dt.OrderMatrixType, orderUpdateCh chan<- [cf.ElevatorCount]dt.OrderMatrixType, outgoingOrderCh chan<- [cf.ElevatorCount]dt.OrderMatrixType) {
-	outgoingOrderCh <- newOrders
-}
-
-func sendStateUpdate(newStates [cf.ElevatorCount]dt.ElevatorState, stateUpdateCh chan<- [cf.ElevatorCount]dt.ElevatorState) {
-	stateUpdateCh <- newStates
-}
-
-func sendOwnStateUpdate(state dt.ElevatorState, outgoingStateCh chan<- dt.ElevatorState) {
-	outgoingStateCh <- state
 }
 
 func sendAcceptedOrders(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType, acceptedOrderCh chan<- dt.OrderType) {

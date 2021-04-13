@@ -36,7 +36,7 @@ func RunOrdersScheduler(
 			elevatorStates = elevatorStatesUpdate
 		case orderMatricesUpdate := <-orderMatricesCh:
 
-			go setButtonLamps(elevatorID, orderMatricesUpdate, buttonLampCh)
+			setButtonLamps(elevatorID, orderMatricesUpdate, buttonLampCh)
 
 			orderMatrices = orderMatricesUpdate
 		}
