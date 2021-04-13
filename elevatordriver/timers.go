@@ -3,14 +3,15 @@ package elevatordriver
 import "time"
 
 
-func runTimeOut(timeLimit time.Duration, startTimerCh <-chan bool, stopTimerCh <-chan bool, timeOutDetectedCh chan<- bool){
+func runTimeOut(timeLimit time.Duration, startMotorFailTimerCh <-chan bool, stopTimerCh <-chan bool, timeOutDetectedCh chan<- bool){
   var initialTime time.Time
   var timerOn bool = false
 
   for{
     select {
-    case <- startTimerCh:
+    case <- startMotorFailTimerCh:
       timerOn = true
+
       initialTime = time.Now()
 
     case <- stopTimerCh:
