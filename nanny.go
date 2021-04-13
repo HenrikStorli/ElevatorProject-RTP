@@ -8,8 +8,6 @@ import (
 	"runtime"
 	"strconv"
 	"time"
-
-	cf "./config"
 )
 
 const (
@@ -104,8 +102,8 @@ func printFromScanner(scanner *bufio.Scanner, restartCh chan bool) {
 func parseFlag() (int, int) {
 	var elevatorID int
 	var port int
-	flag.IntVar(&elevatorID, "id", 0, "Id of the elevator")
-	flag.IntVar(&port, "port", cf.DefaultIOPort, "IP port to harware server")
+	flag.IntVar(&elevatorID, "id", 1, "Id of the elevator")
+	flag.IntVar(&port, "port", 15657, "IP port to harware server")
 	flag.Parse()
 	return elevatorID, port
 }
