@@ -3,6 +3,7 @@ package elevatordriver
 import (
 	"fmt"
 	"time"
+
 	dt "../datatypes"
 )
 
@@ -10,7 +11,7 @@ const (
 	OPEN_DOOR  = true
 	CLOSE_DOOR = false
 
-	TIMER_ON = true
+	TIMER_ON  = true
 	TIMER_OFF = false
 )
 
@@ -44,8 +45,7 @@ func RunStateMachine(elevatorID int,
 	var oldState dt.MachineStateType
 	var orderMatrix OrderMatrixBool
 	var doorObstructed bool
-	var timeLimit time.Duration = time.Duration(7)*time.Second //seconds
-
+	var timeLimit time.Duration = time.Duration(7) * time.Second //seconds
 
 	//Internal channels
 	doorTimerCh := make(chan bool)
@@ -73,8 +73,6 @@ func RunStateMachine(elevatorID int,
 	}
 
 	driverStateUpdateCh <- elevator
-
-
 
 	// Run State machine
 	for {
@@ -134,13 +132,11 @@ func RunStateMachine(elevatorID int,
 				newElevator := updateOnDoorClosing(elevator, orderMatrix)
 				motorDirectionCh <- newElevator.MovingDirection
 
-				if newElevator.MovingDirection != dt.MovingStopped{
+				if newElevator.MovingDirection != dt.MovingStopped {
 					startTimerCh <- TIMER_ON
-					fmt.Println("Timer is turned on after door closes")
 				}
 				elevator = newElevator
 			}
-
 
 		case doorObstructed = <-obstructionSwitchCh:
 

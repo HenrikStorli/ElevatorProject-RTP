@@ -65,15 +65,28 @@ func updateIncomingOrders(newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType,
 		for btn, row := range orderMatrix {
 			for floor, newOrder := range row {
 				oldOrder := &updatedOrderMatrices[indexID][btn][floor]
-				*oldOrder = updateSingleOrder(newOrder, *oldOrder)
+				*oldOrder = updateSingleOrderState(newOrder, *oldOrder)
 			}
 		}
 	}
 	return updatedOrderMatrices
 }
 
+func insertNewScheduledOrder(newScheduledOrder dt.OrderType, oldOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType) [dt.ElevatorCount]dt.OrderMatrixType {
+
+	updatedOrderMatrices := oldOrderMatrices
+	btn := int(newScheduledOrder.Button)
+	floor := newScheduledOrder.Floor
+	elevatorID := newScheduledOrder.ElevatorID
+
+	oldOrder := &updatedOrderMatrices[elevatorID][btn][floor]
+	*oldOrder = updateSingleOrderState(dt.New, *oldOrder)
+
+	return updatedOrderMatrices
+}
+
 //Updates a single order based on the order update rules
-func updateSingleOrder(newOrder dt.OrderStateType, oldOrder dt.OrderStateType) dt.OrderStateType {
+func updateSingleOrderState(newOrder dt.OrderStateType, oldOrder dt.OrderStateType) dt.OrderStateType {
 
 	updatedOrder := oldOrder
 	switch oldOrder {
