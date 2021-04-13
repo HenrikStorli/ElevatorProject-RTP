@@ -34,8 +34,9 @@ const (
 )
 
 type OrderType struct {
-	Button ButtonType
-	Floor  int
+	ElevatorID int
+	Button     ButtonType
+	Floor      int
 }
 
 //OrderMatrixType is the type for the order matrix

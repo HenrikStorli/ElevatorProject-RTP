@@ -13,7 +13,7 @@ func RunOrdersScheduler(
 	newOrderCh <-chan dt.OrderType,
 	elevatorStatesCh <-chan [cf.ElevatorCount]dt.ElevatorState,
 	orderMatricesCh <-chan [cf.ElevatorCount]dt.OrderMatrixType,
-	updateOrderMatricesCh chan<- [cf.ElevatorCount]dt.OrderMatrixType,
+	newScheduledOrderCh chan<- dt.OrderType,
 	//Interface towards iomodule
 	buttonLampCh chan<- iomodule.ButtonLampType,
 ) {
@@ -27,9 +27,9 @@ func RunOrdersScheduler(
 		select {
 		case newOrder := <-newOrderCh:
 			if orderIsNew(elevatorID, newOrder, orderMatrices) {
-				fmt.Printf("New order %v \n", newOrder)
-				updatedOrderMatrices := placeOrder(elevatorID, newOrder, elevatorStates, orderMatrices)
-				go func() { updateOrderMatricesCh <- updatedOrderMatrices }()
+
+				scheduledOrder := placeOrder(elevatorID, newOrder, elevatorStates, orderMatrices)
+				newScheduledOrderCh <- scheduledOrder
 			}
 
 		case elevatorStatesUpdate := <-elevatorStatesCh:
@@ -48,9 +48,9 @@ func placeOrder(
 	newOrder dt.OrderType,
 	elevatorStates [cf.ElevatorCount]dt.ElevatorState,
 	orderMatrices [cf.ElevatorCount]dt.OrderMatrixType,
-) [cf.ElevatorCount]dt.OrderMatrixType {
+) dt.OrderType {
 
-	updatedOrderMatrices := orderMatrices
+	var scheduledOrder dt.OrderType = newOrder
 
 	var fastestElevatorIndex int = elevatorID
 	//fmt.Println("In placeOrder")
@@ -64,11 +64,11 @@ func placeOrder(
 		fastestElevatorIndex = findFastestElevatorServeRquest(elevatorStates, orderMatrices, newOrder)
 	}
 
-	updatedOrderMatrices[fastestElevatorIndex][newOrder.Button][newOrder.Floor] = dt.New
+	scheduledOrder.ElevatorID = fastestElevatorIndex
 
 	fmt.Printf("Directing Order %v to elevator %d \n", newOrder, fastestElevatorIndex+1)
 
-	return updatedOrderMatrices
+	return scheduledOrder
 }
 
 func findFastestElevator(elevatorStates [cf.ElevatorCount]dt.ElevatorState, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType) int {
