@@ -60,7 +60,7 @@ func placeOrder(
 	if newOrder.Button == dt.BtnCab {
 		fastestElevatorIndex = indexID
 	} else {
-		fastestElevatorIndex = findFastestElevatorServeRquest(elevatorStates, orderMatrices, newOrder)
+		fastestElevatorIndex = findFastestElevator(elevatorStates, orderMatrices, newOrder)
 	}
 
 	updatedOrderMatrices[fastestElevatorIndex][newOrder.Button][newOrder.Floor] = dt.New
@@ -110,7 +110,7 @@ func orderIsNew(elevatorID int, order dt.OrderType, orderMatrices [dt.ElevatorCo
 }
 
 // Testing new cost fucntion
-func findFastestElevatorServeRquest(elevatorStates [dt.ElevatorCount]dt.ElevatorState, orderMatrices [dt.ElevatorCount]dt.OrderMatrixType, newOrder dt.OrderType) int {
+func findFastestElevator(elevatorStates [dt.ElevatorCount]dt.ElevatorState, orderMatrices [dt.ElevatorCount]dt.OrderMatrixType, newOrder dt.OrderType) int {
 	var fastestElevatorIndex int = 0
 	var fastestExecutionTime int = 1000
 
