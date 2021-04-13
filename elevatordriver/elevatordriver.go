@@ -22,7 +22,7 @@ func RunStateMachine(elevatorID int,
 	completedOrdersCh chan<- int,
 	//From statehandler
 	acceptedOrderCh <-chan dt.OrderType,
-	restartCh chan<- int,
+	restartCh chan<- bool,
 	//From elevio
 	floorSwitchCh <-chan int,
 	stopBtnCh <-chan bool,
@@ -145,7 +145,7 @@ func RunStateMachine(elevatorID int,
 		case doorObstructed = <-obstructionSwitchCh:
 
 		case <-timeOutDetectedCh:
-			restartCh <- 1
+			restartCh <- true
 
 		case <-stopBtnCh:
 		}
