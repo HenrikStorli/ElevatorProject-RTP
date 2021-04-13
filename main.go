@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	cf "./config"
 	dt "./datatypes"
 	"./elevatordriver"
 	"./iomodule"
@@ -18,15 +19,19 @@ func main() {
 
 	elevatorID, port := parseFlag()
 
-	ports := netmodule.NetworkPorts{
-		PeerTxPort:  16363,
-		PeerRxPort:  16363,
-		BcastRxPort: 26363,
-		BcastTxPort: 26363,
+	if elevatorID < 0 || elevatorID > cf.ElevatorCount-1 {
+		panic("Elevator ID is out of bounds")
 	}
 
-	stateUpdateCh := make(chan [dt.ElevatorCount]dt.ElevatorState)
-	orderUpdateCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
+	ports := netmodule.NetworkPorts{
+		PeerTxPort:  cf.PeerTxPort,
+		PeerRxPort:  cf.PeerRxPort,
+		BcastRxPort: cf.BcastRxPort,
+		BcastTxPort: cf.BcastTxPort,
+	}
+
+	stateUpdateCh := make(chan [cf.ElevatorCount]dt.ElevatorState)
+	orderUpdateCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
 
 	driverStateUpdateCh := make(chan dt.ElevatorState)
 	acceptedOrderCh := make(chan dt.OrderType)
@@ -34,14 +39,14 @@ func main() {
 
 	restartCh := make(chan int)
 
-	scheduledOrdersCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
+	scheduledOrdersCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
 	newOrderCh := make(chan dt.OrderType)
 
 	outgoingStateCh := make(chan dt.ElevatorState)
 	incomingStateCh := make(chan dt.ElevatorState)
 
-	outgoingOrderCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
-	incomingOrderCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
+	outgoingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
+	incomingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
 
 	disconnectCh := make(chan int)
 	connectCh := make(chan int)
@@ -57,7 +62,7 @@ func main() {
 	obstructionSwitchCh := make(chan bool)
 
 	time.Sleep(time.Second)
-	fmt.Println(" Starting modules...")
+	fmt.Println("Starting Modules...")
 
 	go netmodule.RunNetworkModule(
 		elevatorID,
@@ -122,8 +127,8 @@ func main() {
 func parseFlag() (int, int) {
 	var elevatorID int
 	var port int
-	flag.IntVar(&elevatorID, "id", 1, "Id of the elevator")
-	flag.IntVar(&port, "port", 15657, "IP port to harware server")
+	flag.IntVar(&elevatorID, "id", 0, "Id of the elevator")
+	flag.IntVar(&port, "port", cf.DefaultIOPort, "IP port to harware server")
 	flag.Parse()
 	return elevatorID, port
 }

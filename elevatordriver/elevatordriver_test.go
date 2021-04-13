@@ -26,7 +26,7 @@ func TestElevatorDriverModule(*testing.T) {
 	doorOpenCh := make(chan bool)
 	setStopCh := make(chan bool)
 
-	elevatorID := 1
+	elevatorID := 0
 
 	go elevatordriver.RunStateMachine(elevatorID, driverStateUpdateCh, completedOrdersCh,
 		acceptedOrderCh, restartCh, floorSwitchCh, stopBtnCh, obstructionSwitchCh,

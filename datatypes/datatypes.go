@@ -1,10 +1,7 @@
 package datatypes
 
-//This belongs in a config file
-const (
-	FloorCount    int = 4
-	ElevatorCount     = 3
-	ButtonCount       = 3
+import (
+	cf "../config"
 )
 
 type MoveDirectionType int
@@ -42,7 +39,7 @@ type OrderType struct {
 }
 
 //OrderMatrixType is the type for the order matrix
-type OrderMatrixType [ButtonCount][FloorCount]OrderStateType
+type OrderMatrixType [cf.ButtonCount][cf.FloorCount]OrderStateType
 
 //ElevatorState ...
 type ElevatorState struct {
