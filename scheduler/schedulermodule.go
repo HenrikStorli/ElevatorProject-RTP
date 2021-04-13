@@ -61,7 +61,7 @@ func placeOrder(
 	if newOrder.Button == dt.BtnCab {
 		fastestElevatorIndex = elevatorID
 	} else {
-		fastestElevatorIndex = findFastestElevatorServeRquest(elevatorStates, orderMatrices, newOrder)
+		fastestElevatorIndex = findFastestElevator(elevatorStates, orderMatrices, newOrder)
 	}
 
 	scheduledOrder.ElevatorID = fastestElevatorIndex
@@ -71,23 +71,6 @@ func placeOrder(
 	return scheduledOrder
 }
 
-func findFastestElevator(elevatorStates [cf.ElevatorCount]dt.ElevatorState, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType) int {
-	var fastestElevatorIndex int = 0
-	var fastestExecutionTime int = 1000
-
-	for elevatorIndex, state := range elevatorStates {
-		if state.IsFunctioning {
-
-			executionTime := TimeToIdle(state, orderMatrices[elevatorIndex])
-
-			if executionTime < fastestExecutionTime {
-				fastestExecutionTime = executionTime
-				fastestElevatorIndex = elevatorIndex
-			}
-		}
-	}
-	return fastestElevatorIndex
-}
 
 func orderIsNew(elevatorID int, order dt.OrderType, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType) bool {
 
@@ -110,7 +93,7 @@ func orderIsNew(elevatorID int, order dt.OrderType, orderMatrices [cf.ElevatorCo
 }
 
 // Testing new cost fucntion
-func findFastestElevatorServeRquest(elevatorStates [cf.ElevatorCount]dt.ElevatorState, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType, newOrder dt.OrderType) int {
+func findFastestElevator(elevatorStates [cf.ElevatorCount]dt.ElevatorState, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType, newOrder dt.OrderType) int {
 	var fastestElevatorIndex int = 0
 	var fastestExecutionTime int = 1000
 
@@ -129,7 +112,6 @@ func findFastestElevatorServeRquest(elevatorStates [cf.ElevatorCount]dt.Elevator
 }
 
 func setButtonLamps(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType, buttonLampCh chan<- iomodule.ButtonLampType) {
-
 	for rowIndex, row := range newOrderMatrices[0] {
 		btn := dt.ButtonType(rowIndex)
 		for floor, _ := range row {
@@ -147,5 +129,4 @@ func setButtonLamps(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderM
 			buttonLampCh <- iomodule.ButtonLampType{Order: order, TurnOn: lampStatus}
 		}
 	}
-
 }
