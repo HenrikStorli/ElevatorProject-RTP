@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -38,14 +39,15 @@ func main() {
 
 		if runtime.GOOS == "windows" {
 			runningProcess = exec.Command(cmdName+".exe", idFlag, strconv.Itoa(elevatorID), portFlag, strconv.Itoa(port))
+			// Copies printouts from main module into shell
+			go readIOFromProcess(runningProcess, restartCh)
 		} else {
 			runningProcess = exec.Command("./"+cmdName, idFlag, strconv.Itoa(elevatorID), portFlag, strconv.Itoa(port))
+			runningProcess.Stdout = os.Stdout
+			runningProcess.Stderr = os.Stderr
 		}
 		fmt.Println(runningProcess)
 		fmt.Println("  ")
-
-		// Copies printouts from main module into shell
-		go readIOFromProcess(runningProcess, restartCh)
 
 		err := runningProcess.Run()
 		_, ok := err.(*exec.ExitError)
