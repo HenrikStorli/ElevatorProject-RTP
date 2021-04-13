@@ -37,7 +37,7 @@ func main() {
 		if runtime.GOOS == "windows" {
 			runningProcess = exec.Command(cmdName+".exe", idFlag, strconv.Itoa(elevatorID), portFlag, strconv.Itoa(port))
 		} else {
-			runningProcess = exec.Command(cmdName, idFlag, strconv.Itoa(elevatorID), portFlag, strconv.Itoa(port))
+			runningProcess = exec.Command("./"+cmdName, idFlag, strconv.Itoa(elevatorID), portFlag, strconv.Itoa(port))
 		}
 		fmt.Println(runningProcess)
 		fmt.Println("  ")
