@@ -29,7 +29,7 @@ func RunStateHandlerModule(elevatorID int,
 	//interface towards order scheduler
 	stateUpdateCh chan<- [dt.ElevatorCount]dt.ElevatorState,
 	orderUpdateCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
-	newOrdersCh <-chan [dt.ElevatorCount]dt.OrderMatrixType,
+	newScheduledOrderCh <-chan dt.OrderType,
 	redirectedOrderCh chan<- dt.OrderType,
 
 	//Interface towards elevator driver
@@ -58,9 +58,9 @@ func RunStateHandlerModule(elevatorID int,
 			}
 			orderMatrices = updatedOrderMatrices
 
-		case newOrders := <-newOrdersCh:
+		case newScheduledOrder := <-newScheduledOrderCh:
 
-			updatedOrderMatrices := updateIncomingOrders(newOrders, orderMatrices)
+			updatedOrderMatrices := insertNewScheduledOrder(newScheduledOrder, orderMatrices)
 
 			//If the elevator is single, skip the acknowlegdement step and accept new orders directly
 			if isSingleElevator(elevatorID, connectedElevators) {
