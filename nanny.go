@@ -59,8 +59,11 @@ func main() {
 		runningProcess.Wait()
 
 		fmt.Println("### Process terminated, restarting ###")
-		restartCh <- true
 
+		// Restart IO reader
+		if runtime.GOOS == "windows" {
+			restartCh <- true
+		}
 		time.Sleep(time.Second)
 	}
 
