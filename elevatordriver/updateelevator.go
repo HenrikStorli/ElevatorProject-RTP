@@ -6,34 +6,35 @@ import (
 )
 
 func updateOnNewAcceptedOrder(order dt.OrderType, elevator dt.ElevatorState, orderMatrix OrderMatrixBool) (OrderMatrixBool, dt.ElevatorState) {
+	nextState := elevator.State
+	updatedOrderMatrix := orderMatrix
+	newDirection := elevator.MovingDirection
 
 	switch elevator.State {
 	case dt.Idle:
 		if elevator.Floor == order.Floor {
-			//nextState := dt.DoorOpen
-			//elevator.State = nextState
-			elevator.State = dt.DoorOpen
-
+			nextState = dt.DoorOpen
 		} else {
-			//nextState := dt.Moving
-			//elevator.State = nextState
-			elevator.State = dt.Moving
+			nextState = dt.Moving
 
-			orderMatrix = UpdateOrder(orderMatrix, order, ACTIVE)
+			updatedOrderMatrix = UpdateOrder(orderMatrix, order, ACTIVE)
 
-			elevator.MovingDirection = ChooseDirection(elevator, orderMatrix)
+			newDirection = ChooseDirection(elevator, orderMatrix)
 		}
 
 	case dt.Moving:
-		orderMatrix = UpdateOrder(orderMatrix, order, ACTIVE)
+		updatedOrderMatrix = UpdateOrder(orderMatrix, order, ACTIVE)
 
 	case dt.DoorOpen:
 		if order.Floor != elevator.Floor {
-			orderMatrix = UpdateOrder(orderMatrix, order, ACTIVE)
+			updatedOrderMatrix = UpdateOrder(orderMatrix, order, ACTIVE)
 		}
 	}
 
-	return orderMatrix, elevator
+	elevator.State = nextState
+	elevator.MovingDirection = newDirection
+
+	return updatedOrderMatrix, elevator
 }
 
 func updateOnFloorArrival(newFloor int, elevator dt.ElevatorState, orderMatrix OrderMatrixBool) (OrderMatrixBool, dt.ElevatorState) {
