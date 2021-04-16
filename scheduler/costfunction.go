@@ -19,6 +19,7 @@ func estimateOrderExecTime(elevator dt.ElevatorState, orderMatrix dt.OrderMatrix
 	switch simElevatorState.State {
 	case dt.Idle:
 		simElevatorState.MovingDirection = ed.ChooseDirection(simElevatorState, boolOrderMatrix)
+		//An idle, non moving elevator is always the best choice
 		if simElevatorState.MovingDirection == dt.MovingStopped {
 			return duration
 		}
@@ -27,6 +28,10 @@ func estimateOrderExecTime(elevator dt.ElevatorState, orderMatrix dt.OrderMatrix
 		simElevatorState.Floor += int(simElevatorState.MovingDirection)
 
 	case dt.DoorOpen:
+		//An elevator with the door open at the correct floor is also a good choice
+		if simElevatorState.Floor == newOrder.Floor {
+			return duration
+		}
 		duration -= cf.DoorOpenTime / 2
 	}
 

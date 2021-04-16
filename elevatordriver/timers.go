@@ -2,13 +2,13 @@ package elevatordriver
 
 import "time"
 
-func runTimeOut(timeLimit time.Duration, startMotorFailTimerCh <-chan bool, stopTimerCh <-chan bool, timeOutDetectedCh chan<- bool) {
+func runTimeOut(timeLimit time.Duration, startTimerCh <-chan bool, stopTimerCh <-chan bool, timeOutDetectedCh chan<- bool) {
 	var initialTime time.Time
 	var timerOn bool = false
 
 	for {
 		select {
-		case <-startMotorFailTimerCh:
+		case <-startTimerCh:
 			timerOn = true
 
 			initialTime = time.Now()
@@ -28,9 +28,4 @@ func runTimeOut(timeLimit time.Duration, startMotorFailTimerCh <-chan bool, stop
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-}
-
-func startDoorTimer(doorTimerCh chan<- bool) {
-	time.Sleep(3000 * time.Millisecond)
-	doorTimerCh <- true
 }

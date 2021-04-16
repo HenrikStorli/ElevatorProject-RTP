@@ -47,16 +47,22 @@ func RunStateMachine(elevatorID int,
 	var oldState dt.MachineStateType
 	var orderMatrix OrderMatrixBool
 	var doorObstructed bool
-	var timeLimit time.Duration = time.Duration(cf.TimeoutStuckSec) * time.Second //seconds
+	var timeStuckLimit time.Duration = time.Duration(cf.TimeoutStuckSec) * time.Second //seconds
+	var timeDoorOpen time.Duration = time.Duration(cf.DoorOpenTime) * time.Second      //seconds
 
 	// Internal channels
 	doorTimerCh := make(chan bool)
+	startDoorTimerCh := make(chan bool)
+
 	startMotorFailTimerCh := make(chan bool)
 	stopMotorFailTimerCh := make(chan bool)
+
 	timeOutDetectedCh := make(chan bool)
 
 	// Time-out-module in case of motor not working
-	go runTimeOut(timeLimit, startMotorFailTimerCh, stopMotorFailTimerCh, timeOutDetectedCh)
+	go runTimeOut(timeStuckLimit, startMotorFailTimerCh, stopMotorFailTimerCh, timeOutDetectedCh)
+
+	go runTimeOut(timeDoorOpen, startDoorTimerCh, make(<-chan bool), doorTimerCh)
 
 	// Close door at start
 	doorOpenCh <- CLOSE_DOOR
@@ -89,11 +95,12 @@ func RunStateMachine(elevatorID int,
 			newOrderMatrix := SetOrder(orderMatrix, newAcceptedOrder, ACTIVE)
 			updatedElevator := elevator
 
-			if elevator.State == dt.Idle {
-				if elevator.Floor == newAcceptedOrder.Floor {
+			if elevator.State == dt.Idle || elevator.State == dt.DoorOpen {
+				if updatedElevator.Floor == newAcceptedOrder.Floor {
 					updatedElevator.State = dt.DoorOpen
-					go startDoorTimer(doorTimerCh)
+					startDoorTimerCh <- true
 					doorOpenCh <- OPEN_DOOR
+					newOrderMatrix = ClearOrdersAtCurrentFloor(updatedElevator, newOrderMatrix)
 					completedOrdersCh <- updatedElevator.Floor
 
 				} else {
@@ -102,9 +109,6 @@ func RunStateMachine(elevatorID int,
 					motorDirectionCh <- updatedElevator.MovingDirection
 					startMotorFailTimerCh <- true
 				}
-			} else if elevator.State == dt.DoorOpen {
-				newOrderMatrix = ClearOrdersAtCurrentFloor(updatedElevator, newOrderMatrix)
-				completedOrdersCh <- elevator.Floor
 			}
 
 			elevator = updatedElevator
@@ -124,7 +128,7 @@ func RunStateMachine(elevatorID int,
 
 					updatedElevator.State = dt.DoorOpen
 					doorOpenCh <- OPEN_DOOR
-					go startDoorTimer(doorTimerCh)
+					startDoorTimerCh <- true
 
 					newOrderMatrix = ClearOrdersAtCurrentFloor(updatedElevator, orderMatrix)
 					completedOrdersCh <- newFloor
@@ -143,7 +147,7 @@ func RunStateMachine(elevatorID int,
 		case <-doorTimerCh:
 
 			if doorObstructed {
-				go startDoorTimer(doorTimerCh)
+				startDoorTimerCh <- true
 			} else {
 				doorOpenCh <- CLOSE_DOOR
 
