@@ -12,10 +12,10 @@ func updateOnNewAcceptedOrder(order dt.OrderType, elevator dt.ElevatorState, ord
 	switch elevator.State {
 	case dt.Idle:
 		if elevator.Floor == order.Floor {
-			updatedElevator.state = dt.DoorOpen
+			updatedElevator.State = dt.DoorOpen
 
 		} else {
-			updatedElevator.state = dt.Moving
+			updatedElevator.State = dt.Moving
 			updatedElevator.MovingDirection = ChooseDirection(updatedElevator, orderMatrix)
 		}
 	}

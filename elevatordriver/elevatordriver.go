@@ -53,10 +53,10 @@ func RunStateMachine(elevatorID int,
 	var timeLimit time.Duration = time.Duration(cf.TimeoutStuckSec) * time.Second //seconds
 
 	// Internal channels
-	doorTimerCh 			:= make(chan bool)
-	startMotorFailTimerCh 	:= make(chan bool)
-	stopTimerCh 			:= make(chan bool)
-	timeOutDetectedCh 		:= make(chan bool)
+	doorTimerCh := make(chan bool)
+	startMotorFailTimerCh := make(chan bool)
+	stopTimerCh := make(chan bool)
+	timeOutDetectedCh := make(chan bool)
 
 	// Time-out-module in case of motor not working
 	go runTimeOut(timeLimit, startMotorFailTimerCh, stopTimerCh, timeOutDetectedCh)
@@ -85,13 +85,13 @@ func RunStateMachine(elevatorID int,
 		select {
 		case newAcceptedOrder := <-acceptedOrderCh:
 
-			newOrderMatrix := UpdateOrder(orderMatrix, order, ACTIVE)
+			newOrderMatrix := SetOrder(orderMatrix, newAcceptedOrder, ACTIVE)
 			newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator, newOrderMatrix)
 
 			fmt.Printf("Accepting Order %v\n", newAcceptedOrder)
 
 			if elevator.State != newElevator.State {
-				switch(newElevator.State){
+				switch newElevator.State {
 				case dt.Moving:
 					motorDirectionCh <- newElevator.MovingDirection
 					startMotorFailTimerCh <- TIMER_ON
