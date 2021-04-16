@@ -4,10 +4,13 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"time"
+
+	cf "./config"
 )
 
 const (
@@ -36,14 +39,15 @@ func main() {
 
 		if runtime.GOOS == "windows" {
 			runningProcess = exec.Command(cmdName+".exe", idFlag, strconv.Itoa(elevatorID), portFlag, strconv.Itoa(port))
+			// Copies printouts from main module into shell
+			go readIOFromProcess(runningProcess, restartCh)
 		} else {
 			runningProcess = exec.Command("./"+cmdName, idFlag, strconv.Itoa(elevatorID), portFlag, strconv.Itoa(port))
+			runningProcess.Stdout = os.Stdout
+			runningProcess.Stderr = os.Stderr
 		}
 		fmt.Println(runningProcess)
 		fmt.Println("  ")
-
-		// Copies printouts from main module into shell
-		go readIOFromProcess(runningProcess, restartCh)
 
 		err := runningProcess.Run()
 		_, ok := err.(*exec.ExitError)
@@ -57,8 +61,11 @@ func main() {
 		runningProcess.Wait()
 
 		fmt.Println("### Process terminated, restarting ###")
-		restartCh <- true
 
+		// Restart IO reader
+		if runtime.GOOS == "windows" {
+			restartCh <- true
+		}
 		time.Sleep(time.Second)
 	}
 
@@ -102,8 +109,8 @@ func printFromScanner(scanner *bufio.Scanner, restartCh chan bool) {
 func parseFlag() (int, int) {
 	var elevatorID int
 	var port int
-	flag.IntVar(&elevatorID, "id", 1, "Id of the elevator")
-	flag.IntVar(&port, "port", 15657, "IP port to harware server")
+	flag.IntVar(&elevatorID, "id", 0, "Id of the elevator")
+	flag.IntVar(&port, "port", cf.DefaultIOPort, "IP port to harware server")
 	flag.Parse()
 	return elevatorID, port
 }

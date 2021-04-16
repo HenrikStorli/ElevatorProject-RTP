@@ -1,24 +1,21 @@
 package netmodule
 
 import (
-	"fmt"
-	"os"
 	"strconv"
 	"time"
 
+	cf "../config"
 	dt "../datatypes"
 	"./network/bcast"
-	"./network/localip"
 	"./network/peers"
 )
 
 type networkPackage struct {
 	SenderID         int
 	NewState         dt.ElevatorState
-	NewOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType
+	NewOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType
 }
 
-//NetworkPorts is ...
 type NetworkPorts struct {
 	PeerTxPort  int
 	PeerRxPort  int
@@ -42,8 +39,8 @@ const (
 func RunNetworkModule(elevatorID int, networkPorts NetworkPorts,
 	outgoingStateCh <-chan dt.ElevatorState,
 	incomingStateCh chan<- dt.ElevatorState,
-	outgoingOrderCh <-chan [dt.ElevatorCount]dt.OrderMatrixType,
-	incomingOrderCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
+	outgoingOrderCh <-chan [cf.ElevatorCount]dt.OrderMatrixType,
+	incomingOrderCh chan<- [cf.ElevatorCount]dt.OrderMatrixType,
 	disconnectingElevatorIDCh chan<- int,
 	connectingElevatorIDCh chan<- int) {
 
@@ -75,10 +72,10 @@ func initNetworkConnections(elevatorID int, networkPorts NetworkPorts, networkCh
 	go bcast.Receiver(networkPorts.BcastRxPort, networkChannels.ReceiveCh)
 }
 
-func sendNetworkPackage(elevatorID int, networkChannels networkChannelsType, outgoingStateCh <-chan dt.ElevatorState, outgoingOrderCh <-chan [dt.ElevatorCount]dt.OrderMatrixType, resendCount int, resendInterval int) {
+func sendNetworkPackage(elevatorID int, networkChannels networkChannelsType, outgoingStateCh <-chan dt.ElevatorState, outgoingOrderCh <-chan [cf.ElevatorCount]dt.OrderMatrixType, resendCount int, resendInterval int) {
 
 	intervalMillis := time.Duration(resendInterval) * time.Millisecond
-	var nilOrders [dt.ElevatorCount]dt.OrderMatrixType
+	var nilOrders [cf.ElevatorCount]dt.OrderMatrixType
 	var nilState dt.ElevatorState
 	for {
 		select {
@@ -112,11 +109,11 @@ func sendNetworkPackage(elevatorID int, networkChannels networkChannelsType, out
 
 func receiveNetworkPackage(elevatorID int, networkChannels networkChannelsType,
 	incomingStateCh chan<- dt.ElevatorState,
-	incomingOrderCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
+	incomingOrderCh chan<- [cf.ElevatorCount]dt.OrderMatrixType,
 	discardOwnPackages bool,
 	discardRepeatingPackages bool) {
 
-	var nilOrders [dt.ElevatorCount]dt.OrderMatrixType
+	var nilOrders [cf.ElevatorCount]dt.OrderMatrixType
 	var nilState dt.ElevatorState
 
 	var lastPackageReceived networkPackage
@@ -134,12 +131,17 @@ func receiveNetworkPackage(elevatorID int, networkChannels networkChannelsType,
 			if discardOwnPackages && newPackage.SenderID == elevatorID {
 				continue
 			}
+			//Check if senders ID is correct
+			if IsValidID(newPackage.SenderID) {
+				if newPackage.NewState != nilState {
 
-			if newPackage.NewState != nilState {
-				incomingStateCh <- newPackage.NewState
-			}
-			if newPackage.NewOrderMatrices != nilOrders {
-				incomingOrderCh <- newPackage.NewOrderMatrices
+					if IsValidID(newPackage.NewState.ElevatorID) {
+						incomingStateCh <- newPackage.NewState
+					}
+				}
+				if newPackage.NewOrderMatrices != nilOrders {
+					incomingOrderCh <- newPackage.NewOrderMatrices
+				}
 			}
 			lastPackageReceived = newPackage
 		}
@@ -160,7 +162,10 @@ func checkForPeerUpdates(elevatorID int, networkChannels networkChannelsType, di
 			//TODO: add handling of newly connected peers
 			if peerUpdate.New != "" {
 				newID, _ := strconv.Atoi(peerUpdate.New)
-				connectingElevatorIDCh <- newID
+
+				if IsValidID(newID) {
+					connectingElevatorIDCh <- newID
+				}
 			}
 			//Not sure if we need to handle that the disconnected elevator is THIS elevator here
 			//In any case, send that this elevator disconnected before the others to avoid uneccessary redistribution.
@@ -173,7 +178,7 @@ func checkForPeerUpdates(elevatorID int, networkChannels networkChannelsType, di
 			}
 			for _, lostPeer := range peerUpdate.Lost {
 				lostID, _ := strconv.Atoi(lostPeer)
-				if lostID != elevatorID {
+				if lostID != elevatorID && IsValidID(lostID) {
 					disconnectingElevatorIDCh <- lostID
 				}
 			}
@@ -181,15 +186,9 @@ func checkForPeerUpdates(elevatorID int, networkChannels networkChannelsType, di
 	}
 }
 
-//GenerateID is ...
-func GenerateID() string {
-
-	localIP, err := localip.LocalIP()
-	if err != nil {
-		fmt.Println(err)
-		localIP = "DISCONNECTED"
+func IsValidID(elevatorID int) bool {
+	if elevatorID < 0 && elevatorID > cf.ElevatorCount-1 {
+		return false
 	}
-	id := fmt.Sprintf("elevator-%s-%d", localIP, os.Getpid())
-
-	return id
+	return true
 }

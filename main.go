@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	cf "./config"
 	dt "./datatypes"
 	"./elevatordriver"
 	"./iomodule"
@@ -18,46 +19,52 @@ func main() {
 
 	elevatorID, port := parseFlag()
 
-	ports := netmodule.NetworkPorts{
-		PeerTxPort:  16363,
-		PeerRxPort:  16363,
-		BcastRxPort: 26363,
-		BcastTxPort: 26363,
+	if !netmodule.IsValidID(elevatorID) {
+		panic("Elevator ID is out of bounds")
 	}
 
-	stateUpdateCh := make(chan [dt.ElevatorCount]dt.ElevatorState)
-	orderUpdateCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
+	ports := netmodule.NetworkPorts{
+		PeerTxPort:  cf.PeerTxPort,
+		PeerRxPort:  cf.PeerRxPort,
+		BcastRxPort: cf.BcastRxPort,
+		BcastTxPort: cf.BcastTxPort,
+	}
 
-	driverStateUpdateCh := make(chan dt.ElevatorState)
-	acceptedOrderCh := make(chan dt.OrderType)
+	orderMatrixBufferSize := cf.ButtonCount * cf.FloorCount
+
+	stateUpdateCh := make(chan [cf.ElevatorCount]dt.ElevatorState, 1)
+	orderUpdateCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType, 1)
+
+	driverStateUpdateCh := make(chan dt.ElevatorState, 1)
+	acceptedOrderCh := make(chan dt.OrderType, orderMatrixBufferSize)
 	completedOrderFloorCh := make(chan int)
 
 	restartCh := make(chan bool)
 
-	scheduledOrdersCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
-	newOrderCh := make(chan dt.OrderType)
+	scheduledOrdersCh := make(chan dt.OrderType, 10)
+	buttonCallCh := make(chan dt.OrderType, 10)
 
-	outgoingStateCh := make(chan dt.ElevatorState)
+	outgoingStateCh := make(chan dt.ElevatorState, 1)
 	incomingStateCh := make(chan dt.ElevatorState)
 
-	outgoingOrderCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
-	incomingOrderCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
+	outgoingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType, 1)
+	incomingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
 
-	disconnectCh 	:= make(chan int)
-	connectCh 		:= make(chan int)
+	disconnectCh := make(chan int)
+	connectCh := make(chan int)
 
 	motorDirCh := make(chan dt.MoveDirectionType)
 	floorIndicatorCh := make(chan int)
 	doorOpenCh := make(chan bool)
 	stopLampCh := make(chan bool)
-	buttonLampCh := make(chan iomodule.ButtonLampType)
+	buttonLampCh := make(chan iomodule.ButtonLampType, orderMatrixBufferSize)
 
 	floorSensorCh := make(chan int)
 	stopBtnCh := make(chan bool)
 	obstructionSwitchCh := make(chan bool)
 
 	time.Sleep(time.Second)
-	fmt.Println(" Starting modules...")
+	fmt.Println("Starting Modules...")
 
 	go netmodule.RunNetworkModule(
 		elevatorID,
@@ -74,7 +81,7 @@ func main() {
 		doorOpenCh,
 		stopLampCh,
 		buttonLampCh,
-		newOrderCh,
+		buttonCallCh,
 		floorSensorCh,
 		stopBtnCh,
 		obstructionSwitchCh,
@@ -87,7 +94,7 @@ func main() {
 		disconnectCh, connectCh,
 		stateUpdateCh, orderUpdateCh,
 		scheduledOrdersCh,
-		newOrderCh,
+		buttonCallCh,
 		driverStateUpdateCh,
 		acceptedOrderCh, completedOrderFloorCh,
 	)
@@ -103,7 +110,7 @@ func main() {
 
 	go scheduler.RunOrdersScheduler(
 		elevatorID,
-		newOrderCh,
+		buttonCallCh,
 		stateUpdateCh, orderUpdateCh,
 		scheduledOrdersCh,
 		buttonLampCh,
@@ -122,8 +129,8 @@ func main() {
 func parseFlag() (int, int) {
 	var elevatorID int
 	var port int
-	flag.IntVar(&elevatorID, "id", 1, "Id of the elevator")
-	flag.IntVar(&port, "port", 15657, "IP port to harware server")
+	flag.IntVar(&elevatorID, "id", 0, "Id of the elevator")
+	flag.IntVar(&port, "port", cf.DefaultIOPort, "IP port to harware server")
 	flag.Parse()
 	return elevatorID, port
 }

@@ -4,6 +4,7 @@ import (
 	//"fmt"
 	"fmt"
 
+	cf "../config"
 	dt "../datatypes"
 )
 
@@ -14,22 +15,20 @@ const (
 	Disconnected connectionState = false
 )
 
-//RunStateHandlerModule is...
 func RunStateHandlerModule(elevatorID int,
-	//Interface towards both the network module and order scheduler
-	incomingOrderCh <-chan [dt.ElevatorCount]dt.OrderMatrixType,
 
 	//Interface towards network module
-	outgoingOrderCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
+	incomingOrderCh <-chan [cf.ElevatorCount]dt.OrderMatrixType,
+	outgoingOrderCh chan<- [cf.ElevatorCount]dt.OrderMatrixType,
 	incomingStateCh <-chan dt.ElevatorState,
 	outgoingStateCh chan<- dt.ElevatorState,
 	disconnectingElevatorIDCh <-chan int,
 	connectingElevatorIDCh <-chan int,
 
 	//interface towards order scheduler
-	stateUpdateCh chan<- [dt.ElevatorCount]dt.ElevatorState,
-	orderUpdateCh chan<- [dt.ElevatorCount]dt.OrderMatrixType,
-	newOrdersCh <-chan [dt.ElevatorCount]dt.OrderMatrixType,
+	stateUpdateCh chan<- [cf.ElevatorCount]dt.ElevatorState,
+	orderUpdateCh chan<- [cf.ElevatorCount]dt.OrderMatrixType,
+	newScheduledOrderCh <-chan dt.OrderType,
 	redirectedOrderCh chan<- dt.OrderType,
 
 	//Interface towards elevator driver
@@ -38,19 +37,20 @@ func RunStateHandlerModule(elevatorID int,
 	completedOrderFloorCh <-chan int,
 ) {
 
-	var orderMatrices [dt.ElevatorCount]dt.OrderMatrixType
-	var elevatorStates [dt.ElevatorCount]dt.ElevatorState
-	var connectedElevators [dt.ElevatorCount]connectionState
-
-	var timeoutCh chan bool = make(chan bool)
+	var orderMatrices [cf.ElevatorCount]dt.OrderMatrixType
+	var elevatorStates [cf.ElevatorCount]dt.ElevatorState
+	var connectedElevators [cf.ElevatorCount]connectionState
 
 	for {
 		select {
-		case newOrderMatrices := <-incomingOrderCh:
 
-			updatedOrderMatrices := updateIncomingOrders(newOrderMatrices, orderMatrices)
+		// New order update coming from the other elevators
+		case newOrderUpdate := <-incomingOrderCh:
 
-			updatedOrderMatrices = ackNewOrders(elevatorID, updatedOrderMatrices, false)
+			updatedOrderMatrices := updateIncomingOrders(newOrderUpdate, orderMatrices)
+
+			updatedOrderMatrices = setNewOrdersToAck(elevatorID, updatedOrderMatrices, false)
+			updatedOrderMatrices = setCompletedOrdersToNone(elevatorID, updatedOrderMatrices, false)
 
 			if updatedOrderMatrices != orderMatrices {
 				updatedOrderMatrices = acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
@@ -58,45 +58,53 @@ func RunStateHandlerModule(elevatorID int,
 			}
 			orderMatrices = updatedOrderMatrices
 
-		case newOrders := <-newOrdersCh:
+		// New state update coming from the other elevators
+		case newStateUpdate := <-incomingStateCh:
 
-			updatedOrderMatrices := updateIncomingOrders(newOrders, orderMatrices)
+			updatedStates := updateIncomingStates(elevatorID, newStateUpdate, elevatorStates)
 
-			//If the elevator is single, skip the acknowlegdement step and accept new orders directly
-			if isSingleElevator(elevatorID, connectedElevators) {
-				updatedOrderMatrices = ackNewOrders(elevatorID, updatedOrderMatrices, true)
-
-				updatedOrderMatrices = acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
-
-			}
-
-			if updatedOrderMatrices != orderMatrices {
-				outgoingOrderCh <- updatedOrderMatrices
-			}
-
-			orderMatrices = updatedOrderMatrices
-
-		case newState := <-incomingStateCh:
-
-			updatedStates := updateIncomingStates(elevatorID, newState, elevatorStates)
-
-			go sendStateUpdate(updatedStates, stateUpdateCh)
+			stateUpdateCh <- updatedStates
 
 			elevatorStates = updatedStates
 
+		// Order scheduler has made a new scheduled order
+		case newScheduledOrder := <-newScheduledOrderCh:
+
+			updatedOrderMatrices := insertNewScheduledOrder(newScheduledOrder, orderMatrices)
+
+			//If the elevator is single, skip the acknowlegdement step and accept new orders directly
+			if isSingleElevator(elevatorID, connectedElevators) {
+				updatedOrderMatrices = setNewOrdersToAck(elevatorID, updatedOrderMatrices, true)
+
+				updatedOrderMatrices = acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
+			}
+
+			if updatedOrderMatrices != orderMatrices {
+				outgoingOrderCh <- updatedOrderMatrices
+			}
+
+			orderMatrices = updatedOrderMatrices
+
+		// New state coming from Elevator Driver
 		case newDriverStateUpdate := <-driverStateUpdateCh:
 
 			updatedStates := updateOwnState(elevatorID, newDriverStateUpdate, elevatorStates)
 
-			go sendOwnStateUpdate(newDriverStateUpdate, outgoingStateCh)
+			outgoingStateCh <- newDriverStateUpdate
 
-			go sendStateUpdate(updatedStates, stateUpdateCh)
+			stateUpdateCh <- updatedStates
 
 			elevatorStates = updatedStates
 
+		// Elevator drivers has completed orders on this floor
 		case completedOrderFloor := <-completedOrderFloorCh:
 
 			updatedOrderMatrices := completeOrders(elevatorID, completedOrderFloor, orderMatrices)
+
+			// Skip the complete -> none step when single elevator
+			if isSingleElevator(elevatorID, connectedElevators) {
+				updatedOrderMatrices = setCompletedOrdersToNone(elevatorID, updatedOrderMatrices, true)
+			}
 
 			if updatedOrderMatrices != orderMatrices {
 				outgoingOrderCh <- updatedOrderMatrices
@@ -106,18 +114,19 @@ func RunStateHandlerModule(elevatorID int,
 
 		case connectingElevatorID := <-connectingElevatorIDCh:
 			if !isConnected(connectingElevatorID, connectedElevators) {
+
+				fmt.Printf("Elevator %d connected \n", connectingElevatorID)
+
 				updatedConnectedElevators := updateConnectedElevatorList(connectingElevatorID, Connected, connectedElevators)
 
-				indexID := elevatorID - 1
-				ownState := elevatorStates[indexID]
+				// Send own state and orders to all the elevators
+				ownState := elevatorStates[elevatorID]
 
-				go sendOwnStateUpdate(ownState, outgoingStateCh)
+				outgoingStateCh <- ownState
 
 				outgoingOrderCh <- orderMatrices
 
 				connectedElevators = updatedConnectedElevators
-
-				fmt.Printf("Elevator %d connected \n", connectingElevatorID)
 			}
 
 		case disconnectingElevatorID := <-disconnectingElevatorIDCh:
@@ -138,10 +147,10 @@ func RunStateHandlerModule(elevatorID int,
 
 					//Send updated state to order scheduler before sending the redirected orders
 					updatedStates = updateStateOfDisconnectingElevator(disconnectingElevatorID, elevatorStates)
-					go sendStateUpdate(updatedStates, stateUpdateCh)
+					stateUpdateCh <- updatedStates
 
 					//Sends redirected orders to orderscheduler after state and order update
-					go redirectOrders(disconnectingElevatorID, orderMatrices, redirectedOrderCh)
+					redirectOrders(disconnectingElevatorID, orderMatrices, redirectedOrderCh)
 
 					fmt.Printf("Elevator %d disconnected \n", disconnectingElevatorID)
 				}
@@ -155,36 +164,17 @@ func RunStateHandlerModule(elevatorID int,
 				elevatorStates = updatedStates
 			}
 
-		case timeout := <-timeoutCh:
-			if timeout {
-
-			} else {
-				// All good, pass
-			}
 		}
 		orderUpdateCh <- orderMatrices
 	}
 }
 
-func sendOrderUpdate(newOrders [dt.ElevatorCount]dt.OrderMatrixType, orderUpdateCh chan<- [dt.ElevatorCount]dt.OrderMatrixType, outgoingOrderCh chan<- [dt.ElevatorCount]dt.OrderMatrixType) {
-	outgoingOrderCh <- newOrders
-}
+func sendAcceptedOrders(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType, acceptedOrderCh chan<- dt.OrderType) {
 
-func sendStateUpdate(newStates [dt.ElevatorCount]dt.ElevatorState, stateUpdateCh chan<- [dt.ElevatorCount]dt.ElevatorState) {
-	stateUpdateCh <- newStates
-}
+	newOwnOrderMatrix := newOrderMatrices[elevatorID]
 
-func sendOwnStateUpdate(state dt.ElevatorState, outgoingStateCh chan<- dt.ElevatorState) {
-	outgoingStateCh <- state
-}
-
-func sendAcceptedOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.OrderMatrixType, acceptedOrderCh chan<- dt.OrderType) {
-	//TODO: add timeout timer for accepted orders
-	indexID := elevatorID - 1
-	newOwnOrderMatrix := newOrderMatrices[indexID]
-
-	for rowIndex, row := range newOwnOrderMatrix {
-		btn := dt.ButtonType(rowIndex)
+	for btnIndex, row := range newOwnOrderMatrix {
+		btn := dt.ButtonType(btnIndex)
 		for floor, newOrder := range row {
 			if newOrder == dt.Accepted {
 				acceptedOrder := dt.OrderType{Button: btn, Floor: floor}
@@ -195,43 +185,40 @@ func sendAcceptedOrders(elevatorID int, newOrderMatrices [dt.ElevatorCount]dt.Or
 	}
 }
 
-func updateIncomingStates(elevatorID int, newStateUpdate dt.ElevatorState, oldStates [dt.ElevatorCount]dt.ElevatorState) [dt.ElevatorCount]dt.ElevatorState {
+func updateIncomingStates(elevatorID int, newStateUpdate dt.ElevatorState, oldStates [cf.ElevatorCount]dt.ElevatorState) [cf.ElevatorCount]dt.ElevatorState {
 	updatedStates := oldStates
 
 	if newStateUpdate.ElevatorID == elevatorID {
 		return updatedStates
 	}
 
-	for indexID := range updatedStates {
-		id := indexID + 1
-		if id == newStateUpdate.ElevatorID {
-			updatedStates[indexID] = newStateUpdate
+	for ID := range updatedStates {
+		if ID == newStateUpdate.ElevatorID {
+			updatedStates[ID] = newStateUpdate
 		}
 	}
 
 	return updatedStates
 }
 
-func updateOwnState(elevatorID int, newState dt.ElevatorState, oldStates [dt.ElevatorCount]dt.ElevatorState) [dt.ElevatorCount]dt.ElevatorState {
-	indexID := elevatorID - 1
+func updateOwnState(elevatorID int, newState dt.ElevatorState, oldStates [cf.ElevatorCount]dt.ElevatorState) [cf.ElevatorCount]dt.ElevatorState {
+
 	updatedStates := oldStates
-	updatedStates[indexID] = newState
+	updatedStates[elevatorID] = newState
 
 	return updatedStates
 }
 
-func updateStateOfDisconnectingElevator(disconnectingElevatorID int, oldStates [dt.ElevatorCount]dt.ElevatorState) [dt.ElevatorCount]dt.ElevatorState {
+func updateStateOfDisconnectingElevator(disconnectingElevatorID int, oldStates [cf.ElevatorCount]dt.ElevatorState) [cf.ElevatorCount]dt.ElevatorState {
 	updatedStates := oldStates
-	indexID := disconnectingElevatorID - 1
-	updatedStates[indexID].IsFunctioning = false
+	updatedStates[disconnectingElevatorID].IsFunctioning = false
 	return updatedStates
 }
 
-func updateConnectedElevatorList(elevatorID int, newConnectionState connectionState, connectedElevators [dt.ElevatorCount]connectionState) [dt.ElevatorCount]connectionState {
+func updateConnectedElevatorList(elevatorID int, newConnectionState connectionState, connectedElevators [cf.ElevatorCount]connectionState) [cf.ElevatorCount]connectionState {
 	updatedList := connectedElevators
 
-	indexID := elevatorID - 1
-	updatedList[indexID] = newConnectionState
+	updatedList[elevatorID] = newConnectionState
 
 	return updatedList
 }

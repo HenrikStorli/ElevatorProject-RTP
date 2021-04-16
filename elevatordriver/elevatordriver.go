@@ -3,36 +3,38 @@ package elevatordriver
 import (
 	"fmt"
 	"time"
+
+	cf "../config"
 	dt "../datatypes"
 )
 
 const (
 	OPEN_DOOR  = true
 	CLOSE_DOOR = false
-
-	TIMER_ON = true
-	TIMER_OFF = false
 )
 
-type OrderMatrixBool [dt.ButtonCount][dt.FloorCount]bool
+type OrderMatrixBool [cf.ButtonCount][cf.FloorCount]bool
 
 func RunStateMachine(elevatorID int,
-	//To statehandler
+	// To statehandler
 	driverStateUpdateCh chan<- dt.ElevatorState,
 	completedOrdersCh chan<- int,
-	//From statehandler
+	// From statehandler
 	acceptedOrderCh <-chan dt.OrderType,
+
+	// To main
 	restartCh chan<- bool,
-	//From elevio
+
+	// From elevio
 	floorSwitchCh <-chan int,
 	stopBtnCh <-chan bool,
 	obstructionSwitchCh <-chan bool,
-	//To elevio
+	// To elevio
 	floorIndicatorCh chan<- int,
 	motorDirectionCh chan<- dt.MoveDirectionType,
 	doorOpenCh chan<- bool,
-	setStopCh chan<- bool) {
-	// Local data
+	setStopCh chan<- bool,
+) {
 
 	var elevator dt.ElevatorState = dt.ElevatorState{
 		ElevatorID:      elevatorID,
@@ -41,29 +43,30 @@ func RunStateMachine(elevatorID int,
 		State:           dt.Idle,
 		IsFunctioning:   true,
 	}
+
 	var oldState dt.MachineStateType
 	var orderMatrix OrderMatrixBool
 	var doorObstructed bool
-	var timeLimit time.Duration = time.Duration(7)*time.Second //seconds
+	var timeLimit time.Duration = time.Duration(cf.TimeoutStuckSec) * time.Second //seconds
 
-
-	//Internal channels
-	doorTimerCh  		:= make(chan bool)
-	startTimerCh 		:= make(chan bool)
-	stopTimerCh 		:= make(chan bool)
-	timeOutDetectedCh 	:= make(chan bool)
+	// Internal channels
+	doorTimerCh := make(chan bool)
+	startMotorFailTimerCh := make(chan bool)
+	stopMotorFailTimerCh := make(chan bool)
+	timeOutDetectedCh := make(chan bool)
 
 	// Time-out-module in case of motor not working
-	go runTimeOut(timeLimit, startTimerCh, stopTimerCh, timeOutDetectedCh)
+	go runTimeOut(timeLimit, startMotorFailTimerCh, stopMotorFailTimerCh, timeOutDetectedCh)
 
 	// Close door at start
 	doorOpenCh <- CLOSE_DOOR
 
-	// Initialize the elevators position
+	// Initialize the elevator position
 	select {
 	case newFloor := <-floorSwitchCh:
 		floorIndicatorCh <- newFloor
 		elevator.Floor = newFloor
+
 	default:
 		motorDirectionCh <- dt.MovingDown
 		newFloor := <-floorSwitchCh
@@ -74,89 +77,101 @@ func RunStateMachine(elevatorID int,
 
 	driverStateUpdateCh <- elevator
 
-
-
 	// Run State machine
 	for {
 		select {
+
+		// Accepted order to be executed by the elevator
 		case newAcceptedOrder := <-acceptedOrderCh:
-			newOrderMatrix, newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator, orderMatrix)
 
 			fmt.Printf("Accepting Order %v\n", newAcceptedOrder)
 
-			if elevator.State != newElevator.State {
-				if newElevator.State == dt.Moving {
-					motorDirectionCh <- newElevator.MovingDirection
-					// Start timeout-timer
-					startTimerCh <- TIMER_ON
+			newOrderMatrix := SetOrder(orderMatrix, newAcceptedOrder, ACTIVE)
+			updatedElevator := elevator
 
-				} else if newElevator.State == dt.DoorOpen {
+			if elevator.State == dt.Idle {
+				if elevator.Floor == newAcceptedOrder.Floor {
+					updatedElevator.State = dt.DoorOpen
 					go startDoorTimer(doorTimerCh)
 					doorOpenCh <- OPEN_DOOR
-					completedOrdersCh <- newElevator.Floor
-				}
+					completedOrdersCh <- updatedElevator.Floor
 
-			} else {
-				if newElevator.State == dt.DoorOpen {
-					completedOrdersCh <- newElevator.Floor
+				} else {
+					updatedElevator.State = dt.Moving
+					updatedElevator.MovingDirection = ChooseDirection(updatedElevator, newOrderMatrix)
+					motorDirectionCh <- updatedElevator.MovingDirection
+					startMotorFailTimerCh <- true
 				}
+			} else if elevator.State == dt.DoorOpen {
+				newOrderMatrix = ClearOrdersAtCurrentFloor(updatedElevator, newOrderMatrix)
+				completedOrdersCh <- elevator.Floor
 			}
 
-			elevator = newElevator
+			elevator = updatedElevator
 			orderMatrix = newOrderMatrix
 
 		case newFloor := <-floorSwitchCh:
-			newOrderMatrix, newElevator := updateOnNewFloorArrival(newFloor, elevator, orderMatrix)
 
+			newOrderMatrix := orderMatrix
+			updatedElevator := elevator
+
+			updatedElevator.Floor = newFloor
 			floorIndicatorCh <- newFloor
-			// Stop timout-timer
-			stopTimerCh <- TIMER_OFF
 
-			if newElevator.State == dt.DoorOpen {
-				motorDirectionCh <- dt.MovingStopped
-				doorOpenCh <- OPEN_DOOR
-				go startDoorTimer(doorTimerCh)
-				completedOrdersCh <- newFloor
+			if elevator.State == dt.Moving {
+				if ElevatorShouldStop(updatedElevator, orderMatrix) {
+					motorDirectionCh <- dt.MovingStopped
+
+					updatedElevator.State = dt.DoorOpen
+					doorOpenCh <- OPEN_DOOR
+					go startDoorTimer(doorTimerCh)
+
+					newOrderMatrix = ClearOrdersAtCurrentFloor(updatedElevator, orderMatrix)
+					completedOrdersCh <- newFloor
+
+					stopMotorFailTimerCh <- true
+				} else {
+					startMotorFailTimerCh <- true
+				}
 			} else {
-				// Start timeout-timer
-				startTimerCh <- TIMER_ON
+				fmt.Println("Was not in moving state")
 			}
 
-			elevator = newElevator
+			elevator = updatedElevator
 			orderMatrix = newOrderMatrix
 
 		case <-doorTimerCh:
+
 			if doorObstructed {
 				go startDoorTimer(doorTimerCh)
-
 			} else {
 				doorOpenCh <- CLOSE_DOOR
-				newElevator := updateOnDoorClosing(elevator, orderMatrix)
-				motorDirectionCh <- newElevator.MovingDirection
 
-				if newElevator.MovingDirection != dt.MovingStopped{
-					startTimerCh <- TIMER_ON
-					fmt.Println("Timer is turned on after door closes")
+				updatedElevator := updateOnDoorClosing(elevator, orderMatrix)
+
+				motorDirectionCh <- updatedElevator.MovingDirection
+
+				if updatedElevator.MovingDirection != dt.MovingStopped {
+					startMotorFailTimerCh <- true
 				}
-				elevator = newElevator
+
+				elevator = updatedElevator
 			}
 
-
-		case doorObstructed = <-obstructionSwitchCh:
+		case obstructedSwitch := <-obstructionSwitchCh:
+			doorObstructed = obstructedSwitch
 
 		case <-timeOutDetectedCh:
 			restartCh <- true
 
 		case <-stopBtnCh:
 		}
-		// Send updated elevator to statehandler
 
-		driverStateUpdateCh <- elevator // This type does not match the type of the channel
+		driverStateUpdateCh <- elevator
 
 		if elevator.State != oldState {
 			fmt.Printf("STATE: %v  \n", string(elevator.State))
 		}
-
 		oldState = elevator.State
 	}
 }

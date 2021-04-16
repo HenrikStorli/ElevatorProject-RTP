@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	cf "../config"
 	dt "../datatypes"
 	"../netmodule"
 )
@@ -17,7 +18,7 @@ func TestNetworkModule(*testing.T) {
 
 	id1, err := strconv.Atoi(*idString)
 	if err != nil {
-		id1 = 1
+		id1 = 0
 	}
 
 	fmt.Println("Testing Network Module")
@@ -32,8 +33,8 @@ func TestNetworkModule(*testing.T) {
 	outgoingStateCh := make(chan dt.ElevatorState)
 	incomingStateCh := make(chan dt.ElevatorState)
 
-	outgoingOrderCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
-	incomingOrderCh := make(chan [dt.ElevatorCount]dt.OrderMatrixType)
+	outgoingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
+	incomingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
 
 	fmt.Println("running module")
 
@@ -42,9 +43,9 @@ func TestNetworkModule(*testing.T) {
 	netmodule.RunNetworkModule(id1, ports, outgoingStateCh, incomingStateCh, outgoingOrderCh, incomingOrderCh, disconnectCh, connectCh)
 
 	var mockState dt.ElevatorState
-	var mockOrders [dt.ElevatorCount]dt.OrderMatrixType
+	var mockOrders [cf.ElevatorCount]dt.OrderMatrixType
 
-	mockState = dt.ElevatorState{ElevatorID: 1, MovingDirection: dt.MovingDown, Floor: 1, State: 1, IsFunctioning: true}
+	mockState = dt.ElevatorState{ElevatorID: 0, MovingDirection: dt.MovingDown, Floor: 1, State: 1, IsFunctioning: true}
 	mockOrders[2][1][3] = dt.New
 	go func() {
 		for {
