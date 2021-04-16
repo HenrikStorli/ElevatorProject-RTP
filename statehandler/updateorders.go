@@ -29,11 +29,11 @@ func acceptAndSendOrders(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.O
 
 	updatedOrderMatrices := newOrderMatrices
 
-	for rowIndex, row := range newOrderMatrices[elevatorID] {
-		btn := dt.ButtonType(rowIndex)
+	for btnIndex, row := range newOrderMatrices[elevatorID] {
+		btn := dt.ButtonType(btnIndex)
 		for floor, newOrder := range row {
 			if newOrder == dt.Acknowledged {
-				updatedOrderMatrices[elevatorID][rowIndex][floor] = dt.Accepted
+				updatedOrderMatrices[elevatorID][btnIndex][floor] = dt.Accepted
 
 				acceptedOrder := dt.OrderType{Button: btn, Floor: floor}
 				acceptedOrderCh <- acceptedOrder
@@ -76,11 +76,11 @@ func updateIncomingOrders(newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType,
 func insertNewScheduledOrder(newScheduledOrder dt.OrderType, oldOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType) [cf.ElevatorCount]dt.OrderMatrixType {
 
 	updatedOrderMatrices := oldOrderMatrices
-	btn := int(newScheduledOrder.Button)
+	btnIndex := int(newScheduledOrder.Button)
 	floor := newScheduledOrder.Floor
 	elevatorID := newScheduledOrder.ElevatorID
 
-	oldOrder := &updatedOrderMatrices[elevatorID][btn][floor]
+	oldOrder := &updatedOrderMatrices[elevatorID][btnIndex][floor]
 	*oldOrder = updateSingleOrderState(dt.New, *oldOrder)
 
 	return updatedOrderMatrices
@@ -122,10 +122,10 @@ func completeOrders(elevatorID int, completedOrderFloor int, oldOrderMatrices [c
 	updatedOrderMatrices := oldOrderMatrices
 	floor := completedOrderFloor
 
-	for rowIndex := range oldOrderMatrices {
-		oldOrder := oldOrderMatrices[elevatorID][rowIndex][floor]
+	for btnIndex := range oldOrderMatrices {
+		oldOrder := oldOrderMatrices[elevatorID][btnIndex][floor]
 		if oldOrder == dt.Accepted {
-			updatedOrderMatrices[elevatorID][rowIndex][floor] = dt.Completed
+			updatedOrderMatrices[elevatorID][btnIndex][floor] = dt.Completed
 		}
 	}
 
@@ -139,8 +139,8 @@ func redirectOrders(disconnectingElevatorID int, oldOrderMatrices [cf.ElevatorCo
 
 	ownOrderMatrix := oldOrderMatrices[disconnectingElevatorID]
 
-	for rowIndex, row := range ownOrderMatrix {
-		btn := dt.ButtonType(rowIndex)
+	for btnIndex, row := range ownOrderMatrix {
+		btn := dt.ButtonType(btnIndex)
 		//We dont redistribute cab calls
 		if btn == dt.BtnCab {
 			continue
@@ -161,8 +161,8 @@ func removeRedirectedOrders(disconnectingElevatorID int, oldOrderMatrices [cf.El
 
 	ownOrderMatrix := oldOrderMatrices[disconnectingElevatorID]
 
-	for rowIndex, row := range ownOrderMatrix {
-		btn := dt.ButtonType(rowIndex)
+	for btnIndex, row := range ownOrderMatrix {
+		btn := dt.ButtonType(btnIndex)
 		for floor, orderState := range row {
 			newOrderState := dt.None
 			//We dont remove cab calls, but set them as Acknowledged
@@ -170,7 +170,7 @@ func removeRedirectedOrders(disconnectingElevatorID int, oldOrderMatrices [cf.El
 			if btn == dt.BtnCab && isOrderActive(orderState) {
 				newOrderState = dt.Acknowledged
 			}
-			oldOrder := &updatedOrderMatrices[disconnectingElevatorID][rowIndex][floor]
+			oldOrder := &updatedOrderMatrices[disconnectingElevatorID][btnIndex][floor]
 			*oldOrder = newOrderState
 		}
 	}

@@ -6,42 +6,24 @@ import (
 	ed "../elevatordriver"
 )
 
-func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.OrderMatrixBool {
-
-	var boolMatrix ed.OrderMatrixBool
-
-	for floor := 0; floor < cf.FloorCount; floor++ {
-		for btnType := 0; btnType < cf.ButtonCount; btnType++ {
-			if orderMatrix[btnType][floor] == dt.Accepted {
-				boolMatrix[btnType][floor] = ed.ACTIVE
-			}
-		}
-	}
-
-	return boolMatrix
-}
-
 func timeToServeRequest(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType, newOrder dt.OrderType) int {
 
+	simElevatorState := elevator
+
 	boolOrderMatrix := convertOrderTypeToBool(orderMatrix)
-	boolOrderMatrix = ed.UpdateOrder(boolOrderMatrix, newOrder, ed.ACTIVE)
+	boolOrderMatrix = ed.SetOrder(boolOrderMatrix, newOrder, ed.ACTIVE)
 
 	duration := 0
 
-	switch elevator.State {
+	switch simElevatorState.State {
 	case dt.Idle:
-		elevator.MovingDirection = ed.ChooseDirection(elevator, boolOrderMatrix)
-		if elevator.MovingDirection == dt.MovingStopped {
+		simElevatorState.MovingDirection = ed.ChooseDirection(simElevatorState, boolOrderMatrix)
+		if simElevatorState.MovingDirection == dt.MovingStopped {
 			return duration
 		}
-
-		break
-
 	case dt.Moving:
 		duration += cf.TravelTime / 2
-		elevator.Floor += int(elevator.MovingDirection)
-
-		break
+		simElevatorState.Floor += int(simElevatorState.MovingDirection)
 
 	case dt.DoorOpen:
 		duration -= cf.DoorOpenTime / 2
@@ -50,19 +32,19 @@ func timeToServeRequest(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixTyp
 	tries := 0
 
 	for {
-		if ed.ElevatorShouldStop(elevator, boolOrderMatrix) {
-			boolOrderMatrix = ed.ClearOrdersAtCurrentFloor(elevator, boolOrderMatrix)
+		if ed.ElevatorShouldStop(simElevatorState, boolOrderMatrix) {
+			boolOrderMatrix = ed.ClearOrdersAtCurrentFloor(simElevatorState, boolOrderMatrix)
 
-			if elevator.Floor == newOrder.Floor {
+			if simElevatorState.Floor == newOrder.Floor {
 				return duration
 			}
 
 			duration += cf.DoorOpenTime
 
-			elevator.MovingDirection = ed.ChooseDirection(elevator, boolOrderMatrix)
+			simElevatorState.MovingDirection = ed.ChooseDirection(simElevatorState, boolOrderMatrix)
 		}
 
-		elevator.Floor += int(elevator.MovingDirection)
+		simElevatorState.Floor += int(simElevatorState.MovingDirection)
 
 		duration += cf.TravelTime
 
@@ -71,4 +53,19 @@ func timeToServeRequest(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixTyp
 		}
 		tries += 1
 	}
+}
+
+func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.OrderMatrixBool {
+
+	var boolMatrix ed.OrderMatrixBool
+
+	for btnIndex, row := range orderMatrix {
+		for floor, order := range row {
+			if order == dt.Accepted {
+				boolMatrix[btnIndex][floor] = ed.ACTIVE
+			}
+		}
+	}
+
+	return boolMatrix
 }

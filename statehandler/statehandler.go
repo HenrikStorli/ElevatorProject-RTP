@@ -162,8 +162,8 @@ func sendAcceptedOrders(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.Or
 
 	newOwnOrderMatrix := newOrderMatrices[elevatorID]
 
-	for rowIndex, row := range newOwnOrderMatrix {
-		btn := dt.ButtonType(rowIndex)
+	for btnIndex, row := range newOwnOrderMatrix {
+		btn := dt.ButtonType(btnIndex)
 		for floor, newOrder := range row {
 			if newOrder == dt.Accepted {
 				acceptedOrder := dt.OrderType{Button: btn, Floor: floor}

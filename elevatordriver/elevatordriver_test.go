@@ -15,7 +15,7 @@ func TestElevatorDriverModule(*testing.T) {
 	completedOrdersCh := make(chan int)
 	//From statehandler
 	acceptedOrderCh := make(chan dt.OrderType)
-	restartCh := make(chan int)
+	restartCh := make(chan bool)
 	//From elevio
 	floorSwitchCh := make(chan int)
 	stopBtnCh := make(chan bool)

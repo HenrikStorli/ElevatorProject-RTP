@@ -67,7 +67,6 @@ func placeOrder(elevatorID int, newOrder dt.OrderType, elevatorStates [cf.Elevat
 	return scheduledOrder
 }
 
-
 func orderIsNew(elevatorID int, order dt.OrderType, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType) bool {
 
 	for indexID := range orderMatrices {
@@ -113,8 +112,8 @@ func findFastestElevator(elevatorStates [cf.ElevatorCount]dt.ElevatorState, orde
 
 func setButtonLamps(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType, buttonLampCh chan<- iomodule.ButtonLampType) {
 
-	for rowIndex, row := range newOrderMatrices[0] {
-		btn := dt.ButtonType(rowIndex)
+	for btnIndex, row := range newOrderMatrices[0] {
+		btn := dt.ButtonType(btnIndex)
 
 		for floor, _ := range row {
 			lampStatus := false
@@ -124,12 +123,12 @@ func setButtonLamps(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderM
 
 				//cab calls lights up only on own elevator
 				if btn != dt.BtnCab || elevatorID == indexID {
-					if orderMatrix[rowIndex][floor] == dt.Accepted {
+					if orderMatrix[btnIndex][floor] == dt.Accepted {
 						lampStatus = true
 					}
 				}
 			}
-			
+
 			buttonLampCh <- iomodule.ButtonLampType{Order: order, TurnOn: lampStatus}
 		}
 	}

@@ -10,7 +10,7 @@ const (
 	INACTIVE = false
 )
 
-func UpdateOrder(orderMatrix OrderMatrixBool, order dt.OrderType, status bool) OrderMatrixBool {
+func SetOrder(orderMatrix OrderMatrixBool, order dt.OrderType, status bool) OrderMatrixBool {
 
 	orderMatrix[order.Button][order.Floor] = status
 	return orderMatrix
@@ -18,30 +18,17 @@ func UpdateOrder(orderMatrix OrderMatrixBool, order dt.OrderType, status bool) O
 
 func ClearOrdersAtCurrentFloor(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) OrderMatrixBool {
 
-	for btnType := 0; btnType < cf.ButtonCount; btnType++ {
-		orderMatrix[btnType][elevator.Floor] = INACTIVE
+	for btnIndex, _ := range orderMatrix {
+		orderMatrix[btnIndex][elevator.Floor] = INACTIVE
 	}
 
 	return orderMatrix
 }
 
-func anyOrders(orderMatrix OrderMatrixBool) bool {
-
-	for floor := 0; floor < cf.FloorCount; floor++ {
-		for btnType := 0; btnType < cf.ButtonCount; btnType++ {
-			if orderMatrix[btnType][floor] {
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
 func anyOrdersAtCurrentFloor(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {
 
-	for btnType := 0; btnType < cf.ButtonCount; btnType++ {
-		if orderMatrix[btnType][elevator.Floor] {
+	for btnIndex, _ := range orderMatrix {
+		if orderMatrix[btnIndex][elevator.Floor] {
 			return true
 		}
 	}
@@ -52,8 +39,8 @@ func anyOrdersAtCurrentFloor(elevator dt.ElevatorState, orderMatrix OrderMatrixB
 func anyOrdersAbove(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {
 
 	for floor := elevator.Floor + 1; floor < cf.FloorCount; floor++ {
-		for btnType := 0; btnType < cf.ButtonCount; btnType++ {
-			if orderMatrix[btnType][floor] {
+		for btnIndex := 0; btnIndex < cf.ButtonCount; btnIndex++ {
+			if orderMatrix[btnIndex][floor] {
 				return true
 			}
 		}
@@ -65,8 +52,8 @@ func anyOrdersAbove(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool
 func anyOrdersBelow(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {
 
 	for floor := elevator.Floor - 1; floor > -1; floor-- {
-		for btnType := 0; btnType < cf.ButtonCount; btnType++ {
-			if orderMatrix[btnType][floor] {
+		for btnIndex := 0; btnIndex < cf.ButtonCount; btnIndex++ {
+			if orderMatrix[btnIndex][floor] {
 				return true
 			}
 		}
@@ -97,6 +84,6 @@ func anyOrdersInTravelingDirectionAtCurrentFloor(elevator dt.ElevatorState, orde
 			return true
 		}
 	}
-	
+
 	return false
 }
