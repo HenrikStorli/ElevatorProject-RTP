@@ -5,23 +5,6 @@ import (
 	dt "../datatypes"
 )
 
-func updateOnNewAcceptedOrder(order dt.OrderType, elevator dt.ElevatorState, orderMatrix OrderMatrixBool) dt.ElevatorState {
-
-	updatedElevator := elevator
-	
-	switch elevator.State {
-	case dt.Idle:
-		if elevator.Floor == order.Floor {
-			updatedElevator.state = dt.DoorOpen
-			
-		} else {
-			updatedElevator.state = dt.Moving
-			updatedElevator.MovingDirection = ChooseDirection(updatedElevator, orderMatrix)
-		}
-
-	return updatedElevator
-}
-
 func updateOnFloorArrival(newFloor int, elevator dt.ElevatorState, orderMatrix OrderMatrixBool) (OrderMatrixBool, dt.ElevatorState) {
 
 	elevator.Floor = newFloor

@@ -85,27 +85,27 @@ func RunStateMachine(elevatorID int,
 		select {
 		case newAcceptedOrder := <-acceptedOrderCh:
 
-			newOrderMatrix := UpdateOrder(orderMatrix, order, ACTIVE)
-			newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator, newOrderMatrix)
-
 			fmt.Printf("Accepting Order %v\n", newAcceptedOrder)
 
-			if elevator.State != newElevator.State {
-				switch(newElevator.State){
-				case dt.Moving:
-					motorDirectionCh <- newElevator.MovingDirection
-					startMotorFailTimerCh <- TIMER_ON
-				case dt.DoorOpen:
+			newOrderMatrix := UpdateOrder(orderMatrix, order, ACTIVE)
+			newElevator := elevator
+
+			if elevator.state == dt.Idle {
+				if elevator.Floor == newAcceptedOrder.Floor {
+					newElevator.state = dt.DoorOpen
 					go startDoorTimer(doorTimerCh)
 					doorOpenCh <- OPEN_DOOR
 					completedOrdersCh <- newElevator.Floor
+		
+				} else {
+					newElevator.state = dt.Moving
+					newElevator.MovingDirection = ChooseDirection(newElevator, newOrderMatrix)
+					motorDirectionCh <- newElevator.MovingDirection
+					startMotorFailTimerCh <- TIMER_ON
 				}
-
-			} else {
-				if elevator.State == dt.DoorOpen {
-					newOrderMatrix = ClearOrdersAtCurrentFloor(newElevator, newOrderMatrix)
-					completedOrdersCh <- newElevator.Floor
-				}
+			} else if elevator.State == dt.DoorOpen {
+				newOrderMatrix = ClearOrdersAtCurrentFloor(newElevator, newOrderMatrix)
+				completedOrdersCh <- elevator.Floor	
 			}
 
 			elevator = newElevator
