@@ -85,7 +85,8 @@ func RunStateMachine(elevatorID int,
 		select {
 		case newAcceptedOrder := <-acceptedOrderCh:
 
-			newOrderMatrix, newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator, orderMatrix)
+			newOrderMatrix := UpdateOrder(orderMatrix, order, ACTIVE)
+			newElevator := updateOnNewAcceptedOrder(newAcceptedOrder, elevator, newOrderMatrix)
 
 			fmt.Printf("Accepting Order %v\n", newAcceptedOrder)
 
@@ -102,6 +103,7 @@ func RunStateMachine(elevatorID int,
 
 			} else {
 				if elevator.State == dt.DoorOpen {
+					newOrderMatrix = ClearOrdersAtCurrentFloor(newElevator, newOrderMatrix)
 					completedOrdersCh <- newElevator.Floor
 				}
 			}
