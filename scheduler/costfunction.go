@@ -6,7 +6,7 @@ import (
 	ed "../elevatordriver"
 )
 
-// time to execute order
+// Simulates the time that this elevator would use to execute the order
 func estimateOrderExecTime(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType, newOrder dt.OrderType) int {
 
 	simElevatorState := elevator
