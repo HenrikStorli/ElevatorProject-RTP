@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"time"
 
 	cf "./config"
@@ -39,7 +38,7 @@ func main() {
 	acceptedOrderCh := make(chan dt.OrderType, orderMatrixBufferSize)
 	completedOrderFloorCh := make(chan int)
 
-	restartCh := make(chan bool)
+	connectNetworkCh := make(chan bool)
 
 	scheduledOrdersCh := make(chan dt.OrderType, 10)
 	buttonCallCh := make(chan dt.OrderType, 10)
@@ -118,10 +117,6 @@ func main() {
 	)
 
 	for {
-		select {
-		case <-restartCh:
-			os.Exit(0)
-		}
 		time.Sleep(10 * time.Millisecond)
 	}
 
