@@ -6,7 +6,8 @@ import (
 	ed "../elevatordriver"
 )
 
-func timeToServeRequest(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType, newOrder dt.OrderType) int {
+// time to execute order
+func estimateOrderExecTime(elevator dt.ElevatorState, orderMatrix dt.OrderMatrixType, newOrder dt.OrderType) int {
 
 	simElevatorState := elevator
 

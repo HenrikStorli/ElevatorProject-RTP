@@ -98,7 +98,7 @@ func findFastestElevator(elevatorStates [cf.ElevatorCount]dt.ElevatorState, orde
 	for elevatorIndex, state := range elevatorStates {
 		if state.IsFunctioning {
 
-			executionTime := timeToServeRequest(state, orderMatrices[elevatorIndex], newOrder)
+			executionTime := estimateOrderExecTime(state, orderMatrices[elevatorIndex], newOrder)
 
 			if executionTime < fastestExecutionTime {
 				fastestExecutionTime = executionTime

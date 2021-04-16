@@ -15,12 +15,10 @@ const (
 	Disconnected connectionState = false
 )
 
-//RunStateHandlerModule is...
 func RunStateHandlerModule(elevatorID int,
-	//Interface towards both the network module and order scheduler
-	incomingOrderCh <-chan [cf.ElevatorCount]dt.OrderMatrixType,
 
 	//Interface towards network module
+	incomingOrderCh <-chan [cf.ElevatorCount]dt.OrderMatrixType,
 	outgoingOrderCh chan<- [cf.ElevatorCount]dt.OrderMatrixType,
 	incomingStateCh <-chan dt.ElevatorState,
 	outgoingStateCh chan<- dt.ElevatorState,
@@ -45,9 +43,11 @@ func RunStateHandlerModule(elevatorID int,
 
 	for {
 		select {
-		case newOrderMatrices := <-incomingOrderCh:
 
-			updatedOrderMatrices := updateIncomingOrders(newOrderMatrices, orderMatrices)
+		// New order update coming from the other elevators
+		case newOrderUpdate := <-incomingOrderCh:
+
+			updatedOrderMatrices := updateIncomingOrders(newOrderUpdate, orderMatrices)
 
 			updatedOrderMatrices = ackNewOrders(elevatorID, updatedOrderMatrices, false)
 
@@ -57,6 +57,16 @@ func RunStateHandlerModule(elevatorID int,
 			}
 			orderMatrices = updatedOrderMatrices
 
+		// New state update coming from the other elevators
+		case newStateUpdate := <-incomingStateCh:
+
+			updatedStates := updateIncomingStates(elevatorID, newStateUpdate, elevatorStates)
+
+			stateUpdateCh <- updatedStates
+
+			elevatorStates = updatedStates
+
+		// Order scheduler has made a new scheduled order
 		case newScheduledOrder := <-newScheduledOrderCh:
 
 			updatedOrderMatrices := insertNewScheduledOrder(newScheduledOrder, orderMatrices)
@@ -75,14 +85,7 @@ func RunStateHandlerModule(elevatorID int,
 
 			orderMatrices = updatedOrderMatrices
 
-		case newState := <-incomingStateCh:
-
-			updatedStates := updateIncomingStates(elevatorID, newState, elevatorStates)
-
-			stateUpdateCh <- updatedStates
-
-			elevatorStates = updatedStates
-
+		// New state coming from Elevator Driver
 		case newDriverStateUpdate := <-driverStateUpdateCh:
 
 			updatedStates := updateOwnState(elevatorID, newDriverStateUpdate, elevatorStates)
@@ -93,6 +96,7 @@ func RunStateHandlerModule(elevatorID int,
 
 			elevatorStates = updatedStates
 
+		// Elevator drivers has completed orders on this floor
 		case completedOrderFloor := <-completedOrderFloorCh:
 
 			updatedOrderMatrices := completeOrders(elevatorID, completedOrderFloor, orderMatrices)
@@ -105,8 +109,12 @@ func RunStateHandlerModule(elevatorID int,
 
 		case connectingElevatorID := <-connectingElevatorIDCh:
 			if !isConnected(connectingElevatorID, connectedElevators) {
+
+				fmt.Printf("Elevator %d connected \n", connectingElevatorID)
+
 				updatedConnectedElevators := updateConnectedElevatorList(connectingElevatorID, Connected, connectedElevators)
 
+				// Send own state and orders to all the elevators
 				ownState := elevatorStates[elevatorID]
 
 				outgoingStateCh <- ownState
@@ -114,8 +122,6 @@ func RunStateHandlerModule(elevatorID int,
 				outgoingOrderCh <- orderMatrices
 
 				connectedElevators = updatedConnectedElevators
-
-				fmt.Printf("Elevator %d connected \n", connectingElevatorID)
 			}
 
 		case disconnectingElevatorID := <-disconnectingElevatorIDCh:
