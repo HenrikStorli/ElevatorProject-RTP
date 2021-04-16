@@ -7,20 +7,26 @@ import (
 	dt "../datatypes"
 )
 
-func ackNewOrders(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType, singleElevator bool) [cf.ElevatorCount]dt.OrderMatrixType {
+func setCompletedOrdersToNone(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType, singleElevator bool) [cf.ElevatorCount]dt.OrderMatrixType {
 
 	updatedOrderMatrices := newOrderMatrices
 
 	for indexID := range newOrderMatrices {
-		if indexID != elevatorID {
-			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.New, dt.Acknowledged, updatedOrderMatrices[indexID])
+		if indexID != elevatorID || singleElevator {
 			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.Completed, dt.None, updatedOrderMatrices[indexID])
-		} else if singleElevator {
-			//We actually want the orders to go from completed to acknowledged when single elevators
-			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.Completed, dt.None, updatedOrderMatrices[indexID])
+		}
+	}
+	return updatedOrderMatrices
+}
+
+func setNewOrdersToAck(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType, singleElevator bool) [cf.ElevatorCount]dt.OrderMatrixType {
+
+	updatedOrderMatrices := newOrderMatrices
+
+	for indexID := range newOrderMatrices {
+		if indexID != elevatorID || singleElevator {
 			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.New, dt.Acknowledged, updatedOrderMatrices[indexID])
 		}
-
 	}
 	return updatedOrderMatrices
 }

@@ -5,22 +5,6 @@ import (
 	dt "../datatypes"
 )
 
-func updateOnFloorArrival(newFloor int, elevator dt.ElevatorState, orderMatrix OrderMatrixBool) (OrderMatrixBool, dt.ElevatorState) {
-
-	elevator.Floor = newFloor
-
-	switch elevator.State {
-	case dt.Moving:
-		if ElevatorShouldStop(elevator, orderMatrix) {
-			orderMatrix = ClearOrdersAtCurrentFloor(elevator, orderMatrix)
-
-			elevator.State = dt.DoorOpen
-		}
-	}
-
-	return orderMatrix, elevator
-}
-
 func updateOnDoorClosing(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) dt.ElevatorState {
 
 	switch elevator.State {

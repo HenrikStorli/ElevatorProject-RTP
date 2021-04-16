@@ -49,7 +49,8 @@ func RunStateHandlerModule(elevatorID int,
 
 			updatedOrderMatrices := updateIncomingOrders(newOrderUpdate, orderMatrices)
 
-			updatedOrderMatrices = ackNewOrders(elevatorID, updatedOrderMatrices, false)
+			updatedOrderMatrices = setNewOrdersToAck(elevatorID, updatedOrderMatrices, false)
+			updatedOrderMatrices = setCompletedOrdersToNone(elevatorID, updatedOrderMatrices, false)
 
 			if updatedOrderMatrices != orderMatrices {
 				updatedOrderMatrices = acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
@@ -73,10 +74,9 @@ func RunStateHandlerModule(elevatorID int,
 
 			//If the elevator is single, skip the acknowlegdement step and accept new orders directly
 			if isSingleElevator(elevatorID, connectedElevators) {
-				updatedOrderMatrices = ackNewOrders(elevatorID, updatedOrderMatrices, true)
+				updatedOrderMatrices = setNewOrdersToAck(elevatorID, updatedOrderMatrices, true)
 
 				updatedOrderMatrices = acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
-
 			}
 
 			if updatedOrderMatrices != orderMatrices {
@@ -100,6 +100,11 @@ func RunStateHandlerModule(elevatorID int,
 		case completedOrderFloor := <-completedOrderFloorCh:
 
 			updatedOrderMatrices := completeOrders(elevatorID, completedOrderFloor, orderMatrices)
+
+			// Skip the complete -> none step when single elevator
+			if isSingleElevator(elevatorID, connectedElevators) {
+				updatedOrderMatrices = setCompletedOrdersToNone(elevatorID, updatedOrderMatrices, true)
+			}
 
 			if updatedOrderMatrices != orderMatrices {
 				outgoingOrderCh <- updatedOrderMatrices

@@ -62,7 +62,7 @@ func placeOrder(elevatorID int, newOrder dt.OrderType, elevatorStates [cf.Elevat
 
 	scheduledOrder.ElevatorID = fastestElevatorIndex
 
-	fmt.Printf("Directing Order %v to elevator %d \n", newOrder, fastestElevatorIndex+1)
+	fmt.Printf("Directing Order %v to elevator %d \n", newOrder, fastestElevatorIndex)
 
 	return scheduledOrder
 }

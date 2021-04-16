@@ -11,9 +11,6 @@ import (
 const (
 	OPEN_DOOR  = true
 	CLOSE_DOOR = false
-
-	TIMER_ON  = true
-	TIMER_OFF = false
 )
 
 type OrderMatrixBool [cf.ButtonCount][cf.FloorCount]bool
@@ -55,11 +52,11 @@ func RunStateMachine(elevatorID int,
 	// Internal channels
 	doorTimerCh := make(chan bool)
 	startMotorFailTimerCh := make(chan bool)
-	stopTimerCh := make(chan bool)
+	stopMotorFailTimerCh := make(chan bool)
 	timeOutDetectedCh := make(chan bool)
 
 	// Time-out-module in case of motor not working
-	go runTimeOut(timeLimit, startMotorFailTimerCh, stopTimerCh, timeOutDetectedCh)
+	go runTimeOut(timeLimit, startMotorFailTimerCh, stopMotorFailTimerCh, timeOutDetectedCh)
 
 	// Close door at start
 	doorOpenCh <- CLOSE_DOOR
@@ -83,75 +80,82 @@ func RunStateMachine(elevatorID int,
 	// Run State machine
 	for {
 		select {
+
+		// Accepted order to be executed by the elevator
 		case newAcceptedOrder := <-acceptedOrderCh:
 
 			fmt.Printf("Accepting Order %v\n", newAcceptedOrder)
 
 			newOrderMatrix := SetOrder(orderMatrix, newAcceptedOrder, ACTIVE)
-			newElevator := elevator
+			updatedElevator := elevator
 
 			if elevator.State == dt.Idle {
 				if elevator.Floor == newAcceptedOrder.Floor {
-					newElevator.State = dt.DoorOpen
+					updatedElevator.State = dt.DoorOpen
 					go startDoorTimer(doorTimerCh)
 					doorOpenCh <- OPEN_DOOR
-					completedOrdersCh <- newElevator.Floor
+					completedOrdersCh <- updatedElevator.Floor
 
 				} else {
-					newElevator.State = dt.Moving
-					newElevator.MovingDirection = ChooseDirection(newElevator, newOrderMatrix)
-					motorDirectionCh <- newElevator.MovingDirection
-					startMotorFailTimerCh <- TIMER_ON
+					updatedElevator.State = dt.Moving
+					updatedElevator.MovingDirection = ChooseDirection(updatedElevator, newOrderMatrix)
+					motorDirectionCh <- updatedElevator.MovingDirection
+					startMotorFailTimerCh <- true
 				}
 			} else if elevator.State == dt.DoorOpen {
-				newOrderMatrix = ClearOrdersAtCurrentFloor(newElevator, newOrderMatrix)
+				newOrderMatrix = ClearOrdersAtCurrentFloor(updatedElevator, newOrderMatrix)
 				completedOrdersCh <- elevator.Floor
 			}
 
-			elevator = newElevator
+			elevator = updatedElevator
 			orderMatrix = newOrderMatrix
 
 		case newFloor := <-floorSwitchCh:
 
-			newOrderMatrix, newElevator := updateOnFloorArrival(newFloor, elevator, orderMatrix)
+			newOrderMatrix := orderMatrix
+			updatedElevator := elevator
 
+			updatedElevator.Floor = newFloor
 			floorIndicatorCh <- newFloor
 
-			stopTimerCh <- TIMER_OFF
+			if elevator.State == dt.Moving {
+				if ElevatorShouldStop(updatedElevator, orderMatrix) {
+					motorDirectionCh <- dt.MovingStopped
 
-			if newElevator.State == dt.DoorOpen {
-				motorDirectionCh <- dt.MovingStopped
+					updatedElevator.State = dt.DoorOpen
+					doorOpenCh <- OPEN_DOOR
+					go startDoorTimer(doorTimerCh)
 
-				doorOpenCh <- OPEN_DOOR
+					newOrderMatrix = ClearOrdersAtCurrentFloor(updatedElevator, orderMatrix)
+					completedOrdersCh <- newFloor
 
-				go startDoorTimer(doorTimerCh)
-
-				completedOrdersCh <- newFloor
-
+					stopMotorFailTimerCh <- true
+				} else {
+					startMotorFailTimerCh <- true
+				}
 			} else {
-				startMotorFailTimerCh <- TIMER_ON
+				fmt.Println("Was not in moving state")
 			}
 
-			elevator = newElevator
+			elevator = updatedElevator
 			orderMatrix = newOrderMatrix
 
 		case <-doorTimerCh:
 
 			if doorObstructed {
 				go startDoorTimer(doorTimerCh)
-
 			} else {
 				doorOpenCh <- CLOSE_DOOR
 
-				newElevator := updateOnDoorClosing(elevator, orderMatrix)
+				updatedElevator := updateOnDoorClosing(elevator, orderMatrix)
 
-				motorDirectionCh <- newElevator.MovingDirection
+				motorDirectionCh <- updatedElevator.MovingDirection
 
-				if newElevator.MovingDirection != dt.MovingStopped {
-					startMotorFailTimerCh <- TIMER_ON
+				if updatedElevator.MovingDirection != dt.MovingStopped {
+					startMotorFailTimerCh <- true
 				}
 
-				elevator = newElevator
+				elevator = updatedElevator
 			}
 
 		case obstructedSwitch := <-obstructionSwitchCh:
