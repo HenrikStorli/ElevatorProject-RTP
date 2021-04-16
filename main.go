@@ -50,8 +50,8 @@ func main() {
 	outgoingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType, 1)
 	incomingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
 
-	disconnectCh := make(chan int)
-	connectCh := make(chan int)
+	disconnectedIDCh := make(chan int)
+	connectedIDCh := make(chan int)
 
 	motorDirCh := make(chan dt.MoveDirectionType)
 	floorIndicatorCh := make(chan int)
@@ -71,7 +71,8 @@ func main() {
 		ports,
 		outgoingStateCh, incomingStateCh,
 		outgoingOrderCh, incomingOrderCh,
-		disconnectCh, connectCh,
+		disconnectedIDCh, connectedIDCh,
+		connectNetworkCh,
 	)
 
 	go iomodule.RunIOModule(
@@ -91,7 +92,7 @@ func main() {
 		elevatorID,
 		incomingOrderCh, outgoingOrderCh,
 		incomingStateCh, outgoingStateCh,
-		disconnectCh, connectCh,
+		disconnectedIDCh, connectedIDCh,
 		stateUpdateCh, orderUpdateCh,
 		scheduledOrdersCh,
 		buttonCallCh,
@@ -103,7 +104,7 @@ func main() {
 		elevatorID,
 		driverStateUpdateCh,
 		completedOrderFloorCh, acceptedOrderCh,
-		restartCh,
+		connectNetworkCh,
 		floorSensorCh, stopBtnCh, obstructionSwitchCh,
 		floorIndicatorCh, motorDirCh, doorOpenCh, stopLampCh,
 	)

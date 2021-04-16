@@ -42,7 +42,9 @@ func RunNetworkModule(elevatorID int, networkPorts NetworkPorts,
 	outgoingOrderCh <-chan [cf.ElevatorCount]dt.OrderMatrixType,
 	incomingOrderCh chan<- [cf.ElevatorCount]dt.OrderMatrixType,
 	disconnectingElevatorIDCh chan<- int,
-	connectingElevatorIDCh chan<- int) {
+	connectingElevatorIDCh chan<- int,
+	connectNetworkCh <-chan bool,
+) {
 
 	networkChannels := networkChannelsType{
 		PeerTxEnable: make(chan bool),
@@ -57,7 +59,7 @@ func RunNetworkModule(elevatorID int, networkPorts NetworkPorts,
 
 	go receiveNetworkPackage(elevatorID, networkChannels, incomingStateCh, incomingOrderCh, true, true)
 
-	go checkForPeerUpdates(elevatorID, networkChannels, disconnectingElevatorIDCh, connectingElevatorIDCh)
+	go checkForPeerUpdates(elevatorID, networkChannels, disconnectingElevatorIDCh, connectingElevatorIDCh, connectNetworkCh)
 }
 
 func initNetworkConnections(elevatorID int, networkPorts NetworkPorts, networkChannels networkChannelsType) {
@@ -148,10 +150,13 @@ func receiveNetworkPackage(elevatorID int, networkChannels networkChannelsType,
 	}
 }
 
-func checkForPeerUpdates(elevatorID int, networkChannels networkChannelsType, disconnectingElevatorIDCh chan<- int, connectingElevatorIDCh chan<- int) {
+func checkForPeerUpdates(elevatorID int, networkChannels networkChannelsType, disconnectingElevatorIDCh chan<- int, connectingElevatorIDCh chan<- int, connectNetworkCh <-chan bool) {
 
 	for {
 		select {
+		case connected := <-connectNetworkCh:
+			networkChannels.PeerTxEnable <- connected
+
 		case peerUpdate := <-networkChannels.PeerUpdateCh:
 			//peerUpdate.Lost will contain this ID if it is disconnected from the network.
 			// fmt.Printf("Peer update:\n")
