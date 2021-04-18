@@ -120,6 +120,7 @@ func RunStateMachine(elevatorID int,
 			startFailTimerCh <- true
 			if elevator.State == dt.Error {
 					connectNetworkCh <- true
+					updatedElevator.IsFunctioning = true
 			}
 			updatedElevator.Floor = newFloor
 			if ElevatorShouldStop(updatedElevator, orderMatrix) {
@@ -140,6 +141,7 @@ func RunStateMachine(elevatorID int,
 				doorOpenCh <- CLOSE_DOOR
 				if elevator.State == dt.Error {
 						connectNetworkCh <- true
+						updatedElevator.IsFunctioning = true
 				}
 				updatedElevator.MovingDirection = ChooseDirection(elevator, orderMatrix)
 				motorDirectionCh <- updatedElevator.MovingDirection
@@ -157,7 +159,8 @@ func RunStateMachine(elevatorID int,
 			doorObstructed = obstructedSwitch
 
 		case <-timeOutDetectedCh:
-			elevator.State = dt.Error
+			updatedElevator.State = dt.Error
+			updatedElevator.IsFunctioning = false
 			connectNetworkCh <- false
 
 		case <-stopBtnCh:

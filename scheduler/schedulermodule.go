@@ -42,7 +42,7 @@ func RunOrdersScheduler(elevatorID int,
 		case orderMatricesUpdate := <-orderMatricesCh:
 
 			setButtonLamps(elevatorID, orderMatricesUpdate, buttonLampCh)
-
+			//fmt.Println(orderMatricesUpdate)
 			orderMatrices = orderMatricesUpdate
 		}
 	}
