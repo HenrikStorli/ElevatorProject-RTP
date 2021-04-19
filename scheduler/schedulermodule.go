@@ -54,7 +54,7 @@ func placeOrder(elevatorID int, newOrder dt.OrderType, elevatorStates [cf.Elevat
 	var fastestElevatorIndex int = elevatorID
 
 	//Cab calls are always directed to this elevator
-	if newOrder.Button == dt.BtnCab {
+	if newOrder.Button == dt.ButtonCab {
 		fastestElevatorIndex = elevatorID
 	} else {
 		fastestElevatorIndex = findFastestElevator(elevatorStates, orderMatrices, newOrder)
@@ -71,18 +71,18 @@ func orderIsNew(elevatorID int, order dt.OrderType, orderMatrices [cf.ElevatorCo
 
 	for indexID := range orderMatrices {
 		//Ignore cab calls from different elevators
-		if order.Button == dt.BtnCab && elevatorID != indexID {
+		if order.Button == dt.ButtonCab && elevatorID != indexID {
 			continue
 		}
 
 		switch orderMatrices[indexID][order.Button][order.Floor] {
-		case dt.Accepted:
+		case dt.AcceptedOrder:
 			return false
 
-		case dt.New:
+		case dt.NewOrder:
 			return false
 
-		case dt.Acknowledged:
+		case dt.AckedOrder:
 			return false
 		}
 	}
@@ -122,8 +122,8 @@ func setButtonLamps(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderM
 			for indexID, orderMatrix := range newOrderMatrices {
 
 				//cab calls lights up only on own elevator
-				if btn != dt.BtnCab || elevatorID == indexID {
-					if orderMatrix[btnIndex][floor] == dt.Accepted {
+				if btn != dt.ButtonCab || elevatorID == indexID {
+					if orderMatrix[btnIndex][floor] == dt.AcceptedOrder {
 						lampStatus = true
 					}
 				}

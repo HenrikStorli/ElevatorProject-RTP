@@ -30,7 +30,7 @@ func RunIOModule(
 
 ) {
 	portString := strconv.Itoa(port)
-	elevio.Init("localhost:"+portString, cf.FloorCount)
+	elevio.InitState("localhost:"+portString, cf.FloorCount)
 
 	go elevio.PollButtons(buttonEventCh)
 	go elevio.PollFloorSensor(floorSensorCh)

@@ -34,7 +34,7 @@ func TestElevatorDriverModule(*testing.T) {
 
 	go func() {
 		time.Sleep(10 * time.Millisecond)
-		acceptedOrderCh <- dt.OrderType{Button: dt.BtnHallUp, Floor: 1}
+		acceptedOrderCh <- dt.OrderType{Button: dt.ButtonHallUp, Floor: 1}
 		time.Sleep(10 * time.Millisecond)
 	}()
 

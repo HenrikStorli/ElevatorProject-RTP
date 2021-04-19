@@ -55,7 +55,7 @@ func Receiver(port int, chans ...interface{}) {
 			T := reflect.TypeOf(ch).Elem()
 			typeName := T.String()
 			if strings.HasPrefix(string(buf[0:n])+"{", typeName) {
-				v := reflect.New(T)
+				v := reflect.NewOrder(T)
 				json.Unmarshal(buf[len(typeName):n], v.Interface())
 
 				reflect.Select([]reflect.SelectCase{{

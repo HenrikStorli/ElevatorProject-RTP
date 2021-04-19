@@ -1,17 +1,18 @@
 package peers
 
 import (
-	"../conn"
 	"fmt"
 	"net"
 	"sort"
 	"time"
+
+	"../conn"
 )
 
 type PeerUpdate struct {
-	Peers []string
-	New   string
-	Lost  []string
+	Peers    []string
+	NewOrder string
+	Lost     []string
 }
 
 const interval = 15 * time.Millisecond
@@ -51,10 +52,10 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 		id := string(buf[:n])
 
 		// Adding new connection
-		p.New = ""
+		p.NewOrder = ""
 		if id != "" {
 			if _, idExists := lastSeen[id]; !idExists {
-				p.New = id
+				p.NewOrder = id
 				updated = true
 			}
 

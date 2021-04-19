@@ -57,10 +57,10 @@ func TestNetworkModule(*testing.T) {
 
 	var mockState dt.ElevatorState
 	var mockOrders [cf.ElevatorCount]dt.OrderMatrixType
-	mockOrders[0][0][0] = dt.New
-	mockOrders[1][0][0] = dt.New
-	mockOrders[1][1][0] = dt.New
-	mockOrders[1][2][0] = dt.Accepted
+	mockOrders[0][0][0] = dt.NewOrder
+	mockOrders[1][0][0] = dt.NewOrder
+	mockOrders[1][1][0] = dt.NewOrder
+	mockOrders[1][2][0] = dt.AcceptedOrder
 	fmt.Println(mockOrders)
 	go func() {
 		for {
@@ -77,7 +77,7 @@ func TestNetworkModule(*testing.T) {
 			driverStateUpdateCh <- driverState
 			fmt.Println("Sent driver state")
 			time.Sleep(5 * time.Second)
-			completedOrderCh <- dt.OrderType{Button: dt.BtnHallUp, Floor: 0}
+			completedOrderCh <- dt.OrderType{Button: dt.ButtonHallUp, Floor: 0}
 			fmt.Println("Sent completed order")
 			time.Sleep(5 * time.Second)
 			disconnectCh <- 2

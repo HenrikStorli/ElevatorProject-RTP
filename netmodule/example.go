@@ -72,7 +72,7 @@ func main() {
 		case p := <-peerUpdateCh:
 			fmt.Printf("Peer update:\n")
 			fmt.Printf("  Peers:    %q\n", p.Peers)
-			fmt.Printf("  New:      %q\n", p.New)
+			fmt.Printf("  NewOrder:      %q\n", p.NewOrder)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
 		case a := <-helloRx:

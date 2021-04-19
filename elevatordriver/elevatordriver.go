@@ -25,11 +25,11 @@ func RunStateMachine(elevatorID int,
 	// To main
 	connectNetworkCh chan<- bool,
 
-	// From elevio
+	// From iomodule
 	floorSwitchCh <-chan int,
 	stopBtnCh <-chan bool,
 	obstructionSwitchCh <-chan bool,
-	// To elevio
+	// To iomodule
 	floorIndicatorCh chan<- int,
 	motorDirectionCh chan<- dt.MoveDirectionType,
 	doorOpenCh chan<- bool,
@@ -40,30 +40,36 @@ func RunStateMachine(elevatorID int,
 		ElevatorID:      elevatorID,
 		MovingDirection: dt.MovingStopped,
 		Floor:           0,
-		State:           dt.Init,
+		State:           dt.InitState,
 		IsFunctioning:   true,
 	}
 
-	var oldState dt.MachineStateType
+	// Internal variables
 	var orderMatrix OrderMatrixBool
 	var doorObstructed bool
 	var timeStuckLimit time.Duration = time.Duration(cf.TimeoutStuckSec) * time.Second //seconds
 	var timeDoorOpen time.Duration = time.Duration(cf.DoorOpenTime) * time.Second      //seconds
 
+	// Previous values register
+	var oldState dt.DriverStateType = elevator.State
+	var oldDirection dt.MoveDirectionType = elevator.MovingDirection
+	var oldFloor int = elevator.Floor
 
 	// Internal channels
-	doorClosingTimerCh 	:= make(chan bool)
-	startDoorTimerCh 		:= make(chan bool)
 
-	startFailTimerCh 		:= make(chan bool)
-	stopFailTimerCh 		:= make(chan bool)
+	restartDoorTimerCh := make(chan bool)
+	doorClosingTimerCh := make(chan bool)
 
-	timeOutDetectedCh 	:= make(chan bool)
+	restartFailTimerCh := make(chan bool)
+	stopFailTimerCh := make(chan bool)
 
-	// Time-out-module in case of motor not working
-	go runTimeOut(timeStuckLimit, startFailTimerCh, stopFailTimerCh, timeOutDetectedCh)
+	timeOutDetectedCh := make(chan bool)
 
-	go runTimeOut(timeDoorOpen, startDoorTimerCh, make(<-chan bool), doorClosingTimerCh)
+	// Time-out-module in case of elevator not working
+	go runTimeOut(timeStuckLimit, restartFailTimerCh, stopFailTimerCh, timeOutDetectedCh)
+
+	// Time-out module for closing the door
+	go runTimeOut(timeDoorOpen, restartDoorTimerCh, make(<-chan bool), doorClosingTimerCh)
 
 	// Close door at start
 	doorOpenCh <- CLOSE_DOOR
@@ -82,98 +88,139 @@ func RunStateMachine(elevatorID int,
 		motorDirectionCh <- dt.MovingStopped
 	}
 
-	elevator.State = dt.Idle
+	elevator.State = dt.IdleState
 	driverStateUpdateCh <- elevator
 
 	// Run State machine
 	for {
 		newOrderMatrix := orderMatrix
-		updatedElevator := elevator
+		isFunctioning := elevator.IsFunctioning
+
+		newState := elevator.State
+		newDirection := elevator.MovingDirection
+		newFloor := elevator.Floor
 
 		select {
 
-		// Accepted order to be executed by the elevator
+		// AcceptedOrder order to be executed by the elevator
 		case newAcceptedOrder := <-acceptedOrderCh:
 
 			fmt.Printf("Accepting Order %v\n", newAcceptedOrder)
 
 			newOrderMatrix = SetOrder(orderMatrix, newAcceptedOrder, ACTIVE)
 
-			if elevator.State == dt.Idle || elevator.State == dt.DoorOpen {
-				if updatedElevator.Floor == newAcceptedOrder.Floor {
-					updatedElevator.State = dt.DoorOpen
-					startDoorTimerCh <- true
-					doorOpenCh <- OPEN_DOOR
-					newOrderMatrix = ClearOrdersAtCurrentFloor(updatedElevator, newOrderMatrix)
-					completedOrdersCh <- updatedElevator.Floor
+			if elevator.State == dt.IdleState || elevator.State == dt.DoorOpenState {
+				if elevator.Floor == newAcceptedOrder.Floor {
 
-				} else if elevator.State !=  dt.DoorOpen {
-					updatedElevator.State = dt.Moving
-					updatedElevator.MovingDirection = ChooseDirection(updatedElevator, newOrderMatrix)
-					motorDirectionCh <- updatedElevator.MovingDirection
+					newState = dt.DoorOpenState
+
+				} else if elevator.State != dt.DoorOpenState {
+
+					newDirection = ChooseDirection(elevator.MovingDirection, elevator.Floor, newOrderMatrix)
+					newState = dt.MovingState
+
 				}
-				startFailTimerCh <- true
 			}
 
-		case newFloor := <-floorSwitchCh:
-			floorIndicatorCh <- newFloor
-			startFailTimerCh <- true
-			if elevator.State == dt.Error {
-					connectNetworkCh <- true
-					updatedElevator.IsFunctioning = true
-			}
-			updatedElevator.Floor = newFloor
-			if ElevatorShouldStop(updatedElevator, orderMatrix) {
-				motorDirectionCh <- dt.MovingStopped
-				completedOrdersCh <- newFloor
-				startDoorTimerCh <- true
-				doorOpenCh <- OPEN_DOOR
-				updatedElevator.State = dt.DoorOpen
-				newOrderMatrix = ClearOrdersAtCurrentFloor(updatedElevator, orderMatrix)
+		case floor := <-floorSwitchCh:
+
+			if ElevatorShouldStop(elevator.MovingDirection, floor, orderMatrix) {
+				newState = dt.DoorOpenState
 			}
 
-		case <- doorClosingTimerCh:
+			newFloor = floor
+
+		case <-doorClosingTimerCh:
 			if doorObstructed {
-				startDoorTimerCh <- true
+				restartDoorTimerCh <- true
 			} else {
-				completedOrdersCh <- updatedElevator.Floor
-				newOrderMatrix = ClearOrdersAtCurrentFloor(elevator, orderMatrix)
-				doorOpenCh <- CLOSE_DOOR
-				if elevator.State == dt.Error {
-						connectNetworkCh <- true
-						updatedElevator.IsFunctioning = true
-				}
-				updatedElevator.MovingDirection = ChooseDirection(elevator, orderMatrix)
-				motorDirectionCh <- updatedElevator.MovingDirection
-				if updatedElevator.MovingDirection == dt.MovingStopped {
-					updatedElevator.State = dt.Idle
-					stopFailTimerCh <- true
+
+				newDirection = ChooseDirection(elevator.MovingDirection, elevator.Floor, orderMatrix)
+
+				if newDirection == dt.MovingStopped {
+					newState = dt.IdleState
 				} else {
-					updatedElevator.State = dt.Moving
-					startFailTimerCh <- true
+					newState = dt.MovingState
 				}
 			}
-
 
 		case obstructedSwitch := <-obstructionSwitchCh:
 			doorObstructed = obstructedSwitch
 
 		case <-timeOutDetectedCh:
-			updatedElevator.State = dt.Error
-			updatedElevator.IsFunctioning = false
-			connectNetworkCh <- false
+			newState = dt.ErrorState
 
 		case <-stopBtnCh:
 		}
 
-		elevator = updatedElevator
-		orderMatrix = newOrderMatrix
+		if newState != oldState {
+			fmt.Printf("STATE: %v  \n", string(newState))
 
+			switch oldState {
+			case dt.ErrorState:
+				connectNetworkCh <- true
+				isFunctioning = true
+			case dt.DoorOpenState:
+				completedOrdersCh <- elevator.Floor
+
+				//TODO: should order be closed when opening or closing the door?
+				newOrderMatrix = ClearOrdersAtCurrentFloor(elevator.Floor, orderMatrix)
+
+				doorOpenCh <- CLOSE_DOOR
+			}
+
+			switch newState {
+			case dt.IdleState:
+				stopFailTimerCh <- true
+
+			case dt.DoorOpenState:
+				newDirection = dt.MovingStopped
+
+				restartDoorTimerCh <- true
+
+				doorOpenCh <- OPEN_DOOR
+				newOrderMatrix = ClearOrdersAtCurrentFloor(elevator.Floor, newOrderMatrix)
+				completedOrdersCh <- elevator.Floor
+
+				restartFailTimerCh <- true
+
+			case dt.MovingState:
+				restartFailTimerCh <- true
+
+			case dt.ErrorState:
+				isFunctioning = false
+				connectNetworkCh <- false
+			}
+
+		}
+
+		if newDirection != oldDirection {
+			motorDirectionCh <- newDirection
+		}
+
+		if newFloor != oldFloor {
+			floorIndicatorCh <- newFloor
+			restartFailTimerCh <- true
+
+			if oldState == dt.ErrorState {
+				connectNetworkCh <- true
+				isFunctioning = true
+			}
+		}
+
+		elevator.State = newState
+		elevator.MovingDirection = newDirection
+		elevator.Floor = newFloor
+		elevator.IsFunctioning = isFunctioning
+
+		// Send state update to statehandler
 		driverStateUpdateCh <- elevator
 
-		if elevator.State != oldState {
-			fmt.Printf("STATE: %v  \n", string(elevator.State))
-		}
-		oldState = elevator.State
+		orderMatrix = newOrderMatrix
+
+		oldState = newState
+		oldDirection = newDirection
+		oldFloor = newFloor
+
 	}
 }

@@ -15,22 +15,22 @@ const (
 type ButtonType int
 
 const (
-	BtnHallUp   ButtonType = 0
-	BtnHallDown            = 1
-	BtnCab                 = 2
+	ButtonHallUp   ButtonType = 0
+	ButtonHallDown            = 1
+	ButtonCab                 = 2
 )
 
-type MachineStateType string
+type DriverStateType string
 
 type OrderStateType int
 
 const (
-	Unknown OrderStateType = iota
-	None
-	New
-	Acknowledged
-	Accepted
-	Completed
+	UnknownOrder OrderStateType = iota
+	NoOrder
+	NewOrder
+	AckedOrder
+	AcceptedOrder
+	CompletedOrder
 )
 
 type OrderType struct {
@@ -42,19 +42,18 @@ type OrderType struct {
 //OrderMatrixType is the type for the order matrix
 type OrderMatrixType [cf.ButtonCount][cf.FloorCount]OrderStateType
 
-//ElevatorState ...
 type ElevatorState struct {
 	ElevatorID      int
 	MovingDirection MoveDirectionType
 	Floor           int
-	State           MachineStateType
+	State           DriverStateType
 	IsFunctioning   bool
 }
 
 const (
-	Init     		MachineStateType = "init"
-	Idle 				MachineStateType = "idle"
-	Moving   		MachineStateType = "moving"
-	DoorOpen		MachineStateType = "door open"
-	Error				MachineStateType = "error"
+	InitState     DriverStateType = "init"
+	IdleState     DriverStateType = "idle"
+	MovingState   DriverStateType = "moving"
+	DoorOpenState DriverStateType = "door open"
+	ErrorState    DriverStateType = "error"
 )

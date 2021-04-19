@@ -5,57 +5,57 @@ import (
 	dt "../datatypes"
 )
 
-func ElevatorShouldStop(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {
+func ElevatorShouldStop(movingDirection dt.MoveDirectionType, currentFloor int, orderMatrix OrderMatrixBool) bool {
 
-	if anyCabOrdersAtCurrentFloor(elevator, orderMatrix) {
+	if anyCabOrdersAtCurrentFloor(currentFloor, orderMatrix) {
 		return true
 
-	} else if anyOrdersInTravelingDirectionAtCurrentFloor(elevator, orderMatrix) {
+	} else if anyOrdersInTravelingDirectionAtCurrentFloor(movingDirection, currentFloor, orderMatrix) {
 		return true
 
-	} else if anyOrdersAtCurrentFloor(elevator, orderMatrix) {
-		if (elevator.MovingDirection == dt.MovingUp) && (!anyOrdersAbove(elevator, orderMatrix)) {
+	} else if anyOrdersAtCurrentFloor(currentFloor, orderMatrix) {
+		if (movingDirection == dt.MovingUp) && (!anyOrdersAbove(currentFloor, orderMatrix)) {
 			return true
 
-		} else if (elevator.MovingDirection == dt.MovingDown) && (!anyOrdersBelow(elevator, orderMatrix)) {
+		} else if (movingDirection == dt.MovingDown) && (!anyOrdersBelow(currentFloor, orderMatrix)) {
 			return true
 		}
 
-	} else if elevator.Floor == cf.FloorCount-1 {
+	} else if currentFloor == cf.FloorCount-1 {
 		return true
 
-	} else if elevator.Floor == 0 {
+	} else if currentFloor == 0 {
 		return true
 	}
 
 	return false
 }
 
-func ChooseDirection(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) dt.MoveDirectionType {
+func ChooseDirection(movingDirection dt.MoveDirectionType, currentFloor int, orderMatrix OrderMatrixBool) dt.MoveDirectionType {
 
-	switch elevator.MovingDirection {
+	switch movingDirection {
 	case dt.MovingUp:
-		if anyOrdersAbove(elevator, orderMatrix) {
+		if anyOrdersAbove(currentFloor, orderMatrix) {
 			return dt.MovingUp
-		} else if anyOrdersBelow(elevator, orderMatrix) {
+		} else if anyOrdersBelow(currentFloor, orderMatrix) {
 			return dt.MovingDown
 		} else {
 			return dt.MovingStopped
 		}
 
 	case dt.MovingDown:
-		if anyOrdersBelow(elevator, orderMatrix) {
+		if anyOrdersBelow(currentFloor, orderMatrix) {
 			return dt.MovingDown
-		} else if anyOrdersAbove(elevator, orderMatrix) {
+		} else if anyOrdersAbove(currentFloor, orderMatrix) {
 			return dt.MovingUp
 		} else {
 			return dt.MovingStopped
 		}
 
 	case dt.MovingStopped:
-		if anyOrdersBelow(elevator, orderMatrix) {
+		if anyOrdersBelow(currentFloor, orderMatrix) {
 			return dt.MovingDown
-		} else if anyOrdersAbove(elevator, orderMatrix) {
+		} else if anyOrdersAbove(currentFloor, orderMatrix) {
 			return dt.MovingUp
 		} else {
 			return dt.MovingStopped

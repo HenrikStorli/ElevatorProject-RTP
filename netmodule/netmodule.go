@@ -161,12 +161,12 @@ func checkForPeerUpdates(elevatorID int, networkChannels networkChannelsType, di
 			//peerUpdate.Lost will contain this ID if it is disconnected from the network.
 			// fmt.Printf("Peer update:\n")
 			// fmt.Printf("  Peers:    %q\n", peerUpdate.Peers)
-			// fmt.Printf("  New:      %q\n", peerUpdate.New)
+			// fmt.Printf("  NewOrder:      %q\n", peerUpdate.NewOrder)
 			// fmt.Printf("  Lost:     %q\n", peerUpdate.Lost)
 
 			//TODO: add handling of newly connected peers
-			if peerUpdate.New != "" {
-				newID, _ := strconv.Atoi(peerUpdate.New)
+			if peerUpdate.NewOrder != "" {
+				newID, _ := strconv.Atoi(peerUpdate.NewOrder)
 
 				if IsValidID(newID) {
 					connectingElevatorIDCh <- newID

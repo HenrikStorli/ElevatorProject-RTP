@@ -17,17 +17,17 @@ func estimateOrderExecTime(elevator dt.ElevatorState, orderMatrix dt.OrderMatrix
 	duration := 0
 
 	switch simElevatorState.State {
-	case dt.Idle:
-		simElevatorState.MovingDirection = ed.ChooseDirection(simElevatorState, boolOrderMatrix)
+	case dt.IdleState:
+		simElevatorState.MovingDirection = ed.ChooseDirection(simElevatorState.MovingDirection, simElevatorState.Floor, boolOrderMatrix)
 		//An idle, non moving elevator is always the best choice
 		if simElevatorState.MovingDirection == dt.MovingStopped {
 			return duration
 		}
-	case dt.Moving:
+	case dt.MovingState:
 		duration += cf.TravelTime / 2
 		simElevatorState.Floor += int(simElevatorState.MovingDirection)
 
-	case dt.DoorOpen:
+	case dt.DoorOpenState:
 		//An elevator with the door open at the correct floor is also a good choice
 		if simElevatorState.Floor == newOrder.Floor {
 			return duration
@@ -38,8 +38,8 @@ func estimateOrderExecTime(elevator dt.ElevatorState, orderMatrix dt.OrderMatrix
 	tries := 0
 
 	for {
-		if ed.ElevatorShouldStop(simElevatorState, boolOrderMatrix) {
-			boolOrderMatrix = ed.ClearOrdersAtCurrentFloor(simElevatorState, boolOrderMatrix)
+		if ed.ElevatorShouldStop(simElevatorState.MovingDirection, simElevatorState.Floor, boolOrderMatrix) {
+			boolOrderMatrix = ed.ClearOrdersAtCurrentFloor(simElevatorState.Floor, boolOrderMatrix)
 
 			if simElevatorState.Floor == newOrder.Floor {
 				return duration
@@ -47,7 +47,7 @@ func estimateOrderExecTime(elevator dt.ElevatorState, orderMatrix dt.OrderMatrix
 
 			duration += cf.DoorOpenTime
 
-			simElevatorState.MovingDirection = ed.ChooseDirection(simElevatorState, boolOrderMatrix)
+			simElevatorState.MovingDirection = ed.ChooseDirection(simElevatorState.MovingDirection, simElevatorState.Floor, boolOrderMatrix)
 		}
 
 		simElevatorState.Floor += int(simElevatorState.MovingDirection)
@@ -67,7 +67,7 @@ func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.OrderMatrixBool {
 
 	for btnIndex, row := range orderMatrix {
 		for floor, order := range row {
-			if order == dt.Accepted {
+			if order == dt.AcceptedOrder {
 				boolMatrix[btnIndex][floor] = ed.ACTIVE
 			}
 		}

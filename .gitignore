@@ -1,3 +1,5 @@
 *.code-workspace
 *.exe
 pkg
+.VSCodeCounter
+.vscode

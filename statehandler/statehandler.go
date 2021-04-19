@@ -44,7 +44,7 @@ func RunStateHandlerModule(elevatorID int,
 	for {
 		select {
 
-		// New order update coming from the other elevators
+		// NewOrder order update coming from the other elevators
 		case newOrderUpdate := <-incomingOrderCh:
 
 			updatedOrderMatrices := updateIncomingOrders(newOrderUpdate, orderMatrices)
@@ -58,7 +58,7 @@ func RunStateHandlerModule(elevatorID int,
 			}
 			orderMatrices = updatedOrderMatrices
 
-		// New state update coming from the other elevators
+		// NewOrder state update coming from the other elevators
 		case newStateUpdate := <-incomingStateCh:
 
 			updatedStates := updateIncomingStates(elevatorID, newStateUpdate, elevatorStates)
@@ -85,7 +85,7 @@ func RunStateHandlerModule(elevatorID int,
 
 			orderMatrices = updatedOrderMatrices
 
-		// New state coming from Elevator Driver
+		// NewOrder state coming from Elevator Driver
 		case newDriverStateUpdate := <-driverStateUpdateCh:
 
 			updatedStates := updateOwnState(elevatorID, newDriverStateUpdate, elevatorStates)
@@ -177,7 +177,7 @@ func sendAcceptedOrders(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.Or
 	for btnIndex, row := range newOwnOrderMatrix {
 		btn := dt.ButtonType(btnIndex)
 		for floor, newOrder := range row {
-			if newOrder == dt.Accepted {
+			if newOrder == dt.AcceptedOrder {
 				acceptedOrder := dt.OrderType{Button: btn, Floor: floor}
 
 				acceptedOrderCh <- acceptedOrder

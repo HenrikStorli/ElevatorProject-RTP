@@ -16,19 +16,19 @@ func SetOrder(orderMatrix OrderMatrixBool, order dt.OrderType, status bool) Orde
 	return orderMatrix
 }
 
-func ClearOrdersAtCurrentFloor(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) OrderMatrixBool {
+func ClearOrdersAtCurrentFloor(currentFloor int, orderMatrix OrderMatrixBool) OrderMatrixBool {
 
 	for btnIndex, _ := range orderMatrix {
-		orderMatrix[btnIndex][elevator.Floor] = INACTIVE
+		orderMatrix[btnIndex][currentFloor] = INACTIVE
 	}
 
 	return orderMatrix
 }
 
-func anyOrdersAtCurrentFloor(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {
+func anyOrdersAtCurrentFloor(currentFloor int, orderMatrix OrderMatrixBool) bool {
 
 	for btnIndex, _ := range orderMatrix {
-		if orderMatrix[btnIndex][elevator.Floor] {
+		if orderMatrix[btnIndex][currentFloor] {
 			return true
 		}
 	}
@@ -36,9 +36,9 @@ func anyOrdersAtCurrentFloor(elevator dt.ElevatorState, orderMatrix OrderMatrixB
 	return false
 }
 
-func anyOrdersAbove(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {
+func anyOrdersAbove(currentFloor int, orderMatrix OrderMatrixBool) bool {
 
-	for floor := elevator.Floor + 1; floor < cf.FloorCount; floor++ {
+	for floor := currentFloor + 1; floor < cf.FloorCount; floor++ {
 		for btnIndex := 0; btnIndex < cf.ButtonCount; btnIndex++ {
 			if orderMatrix[btnIndex][floor] {
 				return true
@@ -49,9 +49,9 @@ func anyOrdersAbove(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool
 	return false
 }
 
-func anyOrdersBelow(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {
+func anyOrdersBelow(currentFloor int, orderMatrix OrderMatrixBool) bool {
 
-	for floor := elevator.Floor - 1; floor > -1; floor-- {
+	for floor := currentFloor - 1; floor > -1; floor-- {
 		for btnIndex := 0; btnIndex < cf.ButtonCount; btnIndex++ {
 			if orderMatrix[btnIndex][floor] {
 				return true
@@ -62,25 +62,25 @@ func anyOrdersBelow(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool
 	return false
 }
 
-func anyCabOrdersAtCurrentFloor(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {
+func anyCabOrdersAtCurrentFloor(currentFloor int, orderMatrix OrderMatrixBool) bool {
 
-	if orderMatrix[dt.BtnCab][elevator.Floor] {
+	if orderMatrix[dt.ButtonCab][currentFloor] {
 		return true
 	}
 
 	return false
 }
 
-func anyOrdersInTravelingDirectionAtCurrentFloor(elevator dt.ElevatorState, orderMatrix OrderMatrixBool) bool {
+func anyOrdersInTravelingDirectionAtCurrentFloor(movingDirection dt.MoveDirectionType, currentFloor int, orderMatrix OrderMatrixBool) bool {
 
-	switch elevator.MovingDirection {
+	switch movingDirection {
 	case dt.MovingDown:
-		if orderMatrix[dt.BtnHallDown][elevator.Floor] {
+		if orderMatrix[dt.ButtonHallDown][currentFloor] {
 			return true
 		}
 
 	case dt.MovingUp:
-		if orderMatrix[dt.BtnHallUp][elevator.Floor] {
+		if orderMatrix[dt.ButtonHallUp][currentFloor] {
 			return true
 		}
 	}

@@ -46,7 +46,7 @@ func TestNetworkModule(*testing.T) {
 	var mockOrders [cf.ElevatorCount]dt.OrderMatrixType
 
 	mockState = dt.ElevatorState{ElevatorID: 0, MovingDirection: dt.MovingDown, Floor: 1, State: 1, IsFunctioning: true}
-	mockOrders[2][1][3] = dt.New
+	mockOrders[2][1][3] = dt.NewOrder
 	go func() {
 		for {
 			outgoingStateCh <- mockState
