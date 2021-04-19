@@ -107,7 +107,7 @@ func RunStateMachine(elevatorID int,
 					newOrderMatrix = ClearOrdersAtCurrentFloor(updatedElevator, newOrderMatrix)
 					completedOrdersCh <- updatedElevator.Floor
 
-				} else if elevator.State !=  dt.DoorOpen {
+				} else if elevator.State == dt.Idle {
 					updatedElevator.State = dt.Moving
 					updatedElevator.MovingDirection = ChooseDirection(updatedElevator, newOrderMatrix)
 					motorDirectionCh <- updatedElevator.MovingDirection
