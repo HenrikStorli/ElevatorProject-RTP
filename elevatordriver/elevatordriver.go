@@ -15,7 +15,7 @@ const (
 
 type OrderMatrixBool [cf.ButtonCount][cf.FloorCount]bool
 
-func RunStateMachine(elevatorID int,
+func RunElevatorDriverModule(elevatorID int,
 	// To statehandler
 	driverStateUpdateCh chan<- dt.ElevatorState,
 	completedOrdersCh chan<- int,

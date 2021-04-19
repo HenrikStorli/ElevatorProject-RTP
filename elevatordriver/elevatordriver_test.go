@@ -28,7 +28,7 @@ func TestElevatorDriverModule(*testing.T) {
 
 	elevatorID := 0
 
-	go elevatordriver.RunStateMachine(elevatorID, driverStateUpdateCh, completedOrdersCh,
+	go elevatordriver.RunElevatorDriverModule(elevatorID, driverStateUpdateCh, completedOrdersCh,
 		acceptedOrderCh, restartCh, floorSwitchCh, stopBtnCh, obstructionSwitchCh,
 		floorIndicatorCh, motorDirectionCh, doorOpenCh, setStopCh)
 

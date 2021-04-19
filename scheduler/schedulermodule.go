@@ -8,7 +8,7 @@ import (
 	"../iomodule"
 )
 
-func RunOrdersScheduler(elevatorID int,
+func RunOrdersSchedulerModule(elevatorID int,
 	//From iomodule and orders scheduler
 	newOrderCh <-chan dt.OrderType,
 
