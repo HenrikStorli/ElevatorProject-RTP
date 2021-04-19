@@ -101,12 +101,13 @@ func RunStateHandlerModule(elevatorID int,
 
 			updatedOrderMatrices := completeOrders(elevatorID, completedOrderFloor, orderMatrices)
 
+			if updatedOrderMatrices != orderMatrices {
+				outgoingOrderCh <- updatedOrderMatrices
+			}
+
 			// Skip the complete -> none step when single elevator
 			if isSingleElevator(elevatorID, connectedElevators) {
 				updatedOrderMatrices = setCompletedOrdersToNone(elevatorID, updatedOrderMatrices, true)
-			}
-
-			if updatedOrderMatrices != orderMatrices {
 				outgoingOrderCh <- updatedOrderMatrices
 			}
 
