@@ -72,14 +72,16 @@ func RunStateHandlerModule(elevatorID int,
 
 			updatedOrderMatrices := insertNewScheduledOrder(newScheduledOrder, orderMatrices)
 
+			if updatedOrderMatrices != orderMatrices {
+				outgoingOrderCh <- updatedOrderMatrices
+			}
+
 			//If the elevator is single, skip the acknowlegdement step and accept new orders directly
 			if isSingleElevator(elevatorID, connectedElevators) {
 				updatedOrderMatrices = setNewOrdersToAck(elevatorID, updatedOrderMatrices, true)
 
 				updatedOrderMatrices = acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
-			}
 
-			if updatedOrderMatrices != orderMatrices {
 				outgoingOrderCh <- updatedOrderMatrices
 			}
 

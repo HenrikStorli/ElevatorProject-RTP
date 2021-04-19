@@ -52,7 +52,6 @@ func RunStateMachine(elevatorID int,
 
 	// Previous values register
 	var oldState dt.DriverStateType = elevator.State
-	var oldFloor int = elevator.Floor
 
 	// Internal channels
 
@@ -121,6 +120,14 @@ func RunStateMachine(elevatorID int,
 
 			if ElevatorShouldStop(elevator.MovingDirection, floor, orderMatrix) {
 				newState = dt.DoorOpenState
+			}
+
+			floorIndicatorCh <- floor
+			restartFailTimerCh <- true
+
+			if oldState == dt.ErrorState {
+				connectNetworkCh <- true
+				isFunctioning = true
 			}
 
 			newFloor = floor
@@ -194,19 +201,7 @@ func RunStateMachine(elevatorID int,
 			elevator.MovingDirection = newDirection
 		}
 
-		if newFloor != oldFloor {
-			floorIndicatorCh <- newFloor
-			restartFailTimerCh <- true
-
-			if oldState == dt.ErrorState {
-				connectNetworkCh <- true
-				isFunctioning = true
-			}
-		}
-
 		elevator.Floor = newFloor
-		oldFloor = newFloor
-
 		elevator.IsFunctioning = isFunctioning
 
 		// Send state update to statehandler
