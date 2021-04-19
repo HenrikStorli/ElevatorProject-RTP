@@ -52,7 +52,6 @@ func RunStateMachine(elevatorID int,
 
 	// Previous values register
 	var oldState dt.DriverStateType = elevator.State
-	var oldDirection dt.MoveDirectionType = elevator.MovingDirection
 	var oldFloor int = elevator.Floor
 
 	// Internal channels
@@ -96,8 +95,8 @@ func RunStateMachine(elevatorID int,
 		newOrderMatrix := orderMatrix
 		isFunctioning := elevator.IsFunctioning
 
-		newState := elevator.State
-		newDirection := elevator.MovingDirection
+		newState := dt.InvalidState
+		newDirection := dt.MovingInvalid
 		newFloor := elevator.Floor
 
 		select {
@@ -109,17 +108,13 @@ func RunStateMachine(elevatorID int,
 
 			newOrderMatrix = SetOrder(orderMatrix, newAcceptedOrder, ACTIVE)
 
-			if elevator.State == dt.IdleState || elevator.State == dt.DoorOpenState {
-				if elevator.Floor == newAcceptedOrder.Floor {
-
+			if elevator.Floor == newAcceptedOrder.Floor {
+				if elevator.State == dt.DoorOpenState || elevator.State == dt.IdleState {
 					newState = dt.DoorOpenState
-
-				} else if elevator.State != dt.DoorOpenState {
-
-					newDirection = ChooseDirection(elevator.MovingDirection, elevator.Floor, newOrderMatrix)
-					newState = dt.MovingState
-
 				}
+			} else if elevator.State == dt.IdleState {
+				newDirection = ChooseDirection(elevator.MovingDirection, elevator.Floor, newOrderMatrix)
+				newState = dt.MovingState
 			}
 
 		case floor := <-floorSwitchCh:
@@ -151,9 +146,11 @@ func RunStateMachine(elevatorID int,
 			newState = dt.ErrorState
 
 		case <-stopBtnCh:
+			newState = dt.ErrorState
+			newDirection = dt.MovingStopped
 		}
 
-		if newState != oldState {
+		if newState != dt.InvalidState {
 			fmt.Printf("STATE: %v  \n", string(newState))
 
 			switch oldState {
@@ -161,11 +158,6 @@ func RunStateMachine(elevatorID int,
 				connectNetworkCh <- true
 				isFunctioning = true
 			case dt.DoorOpenState:
-				completedOrdersCh <- elevator.Floor
-
-				//TODO: should order be closed when opening or closing the door?
-				newOrderMatrix = ClearOrdersAtCurrentFloor(elevator.Floor, orderMatrix)
-
 				doorOpenCh <- CLOSE_DOOR
 			}
 
@@ -179,8 +171,8 @@ func RunStateMachine(elevatorID int,
 				restartDoorTimerCh <- true
 
 				doorOpenCh <- OPEN_DOOR
-				newOrderMatrix = ClearOrdersAtCurrentFloor(elevator.Floor, newOrderMatrix)
-				completedOrdersCh <- elevator.Floor
+				newOrderMatrix = ClearOrdersAtCurrentFloor(newFloor, newOrderMatrix)
+				completedOrdersCh <- newFloor
 
 				restartFailTimerCh <- true
 
@@ -192,10 +184,14 @@ func RunStateMachine(elevatorID int,
 				connectNetworkCh <- false
 			}
 
+			elevator.State = newState
+			oldState = newState
 		}
 
-		if newDirection != oldDirection {
+		if newDirection != dt.MovingInvalid {
 			motorDirectionCh <- newDirection
+
+			elevator.MovingDirection = newDirection
 		}
 
 		if newFloor != oldFloor {
@@ -208,19 +204,15 @@ func RunStateMachine(elevatorID int,
 			}
 		}
 
-		elevator.State = newState
-		elevator.MovingDirection = newDirection
 		elevator.Floor = newFloor
+		oldFloor = newFloor
+
 		elevator.IsFunctioning = isFunctioning
 
 		// Send state update to statehandler
 		driverStateUpdateCh <- elevator
 
 		orderMatrix = newOrderMatrix
-
-		oldState = newState
-		oldDirection = newDirection
-		oldFloor = newFloor
 
 	}
 }

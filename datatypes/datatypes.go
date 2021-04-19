@@ -7,7 +7,8 @@ import (
 type MoveDirectionType int
 
 const (
-	MovingDown    MoveDirectionType = -1
+	MovingInvalid MoveDirectionType = -99
+	MovingDown                      = -1
 	MovingStopped                   = 0
 	MovingUp                        = 1
 )
@@ -56,4 +57,5 @@ const (
 	MovingState   DriverStateType = "moving"
 	DoorOpenState DriverStateType = "door open"
 	ErrorState    DriverStateType = "error"
+	InvalidState  DriverStateType = "invalid"
 )
