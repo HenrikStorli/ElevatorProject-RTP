@@ -111,8 +111,8 @@ func RunElevatorDriverModule(elevatorID int,
 					updatedElevator.State = dt.Moving
 					updatedElevator.MovingDirection = ChooseDirection(updatedElevator, newOrderMatrix)
 					motorDirectionCh <- updatedElevator.MovingDirection
-				}
-				startFailTimerCh <- true
+					startFailTimerCh <- true
+				}	
 			}
 
 		case newFloor := <-floorSwitchCh:
