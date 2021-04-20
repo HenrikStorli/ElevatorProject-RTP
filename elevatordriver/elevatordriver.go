@@ -38,7 +38,7 @@ func RunStateMachine(elevatorID int,
 
 	var elevator dt.ElevatorState = dt.ElevatorState{
 		ElevatorID:      elevatorID,
-		MovingDirection: dt.MovingStopped,
+		MovingDirection: dt.MovingNeutral,
 		Floor:           0,
 		State:           dt.InitState,
 		IsFunctioning:   true,
@@ -83,7 +83,7 @@ func RunStateMachine(elevatorID int,
 		newFloor := <-floorSwitchCh
 		floorIndicatorCh <- newFloor
 		elevator.Floor = newFloor
-		motorDirectionCh <- dt.MovingStopped
+		motorDirectionCh <- dt.MovingNeutral
 	}
 
 	elevator.State = dt.IdleState
@@ -139,7 +139,7 @@ func RunStateMachine(elevatorID int,
 
 				newDirection = ChooseDirection(elevator.MovingDirection, elevator.Floor, orderMatrix)
 
-				if newDirection == dt.MovingStopped {
+				if newDirection == dt.MovingNeutral {
 					newState = dt.IdleState
 				} else {
 					newState = dt.MovingState
@@ -153,8 +153,7 @@ func RunStateMachine(elevatorID int,
 			newState = dt.ErrorState
 
 		case <-stopBtnCh:
-			newState = dt.ErrorState
-			newDirection = dt.MovingStopped
+			newDirection = dt.MovingNeutral
 		}
 
 		if newState != dt.InvalidState {
@@ -165,15 +164,18 @@ func RunStateMachine(elevatorID int,
 				connectNetworkCh <- true
 				isFunctioning = true
 			case dt.DoorOpenState:
-				doorOpenCh <- CLOSE_DOOR
+				if newState != dt.ErrorState {
+					doorOpenCh <- CLOSE_DOOR
+				}
 			}
 
 			switch newState {
 			case dt.IdleState:
 				stopFailTimerCh <- true
+				newDirection = dt.MovingNeutral
 
 			case dt.DoorOpenState:
-				newDirection = dt.MovingStopped
+				motorDirectionCh <- dt.MovingNeutral
 
 				restartDoorTimerCh <- true
 

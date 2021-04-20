@@ -40,7 +40,7 @@ func ChooseDirection(movingDirection dt.MoveDirectionType, currentFloor int, ord
 		} else if anyOrdersBelow(currentFloor, orderMatrix) {
 			return dt.MovingDown
 		} else {
-			return dt.MovingStopped
+			return dt.MovingNeutral
 		}
 
 	case dt.MovingDown:
@@ -49,19 +49,19 @@ func ChooseDirection(movingDirection dt.MoveDirectionType, currentFloor int, ord
 		} else if anyOrdersAbove(currentFloor, orderMatrix) {
 			return dt.MovingUp
 		} else {
-			return dt.MovingStopped
+			return dt.MovingNeutral
 		}
 
-	case dt.MovingStopped:
+	case dt.MovingNeutral:
 		if anyOrdersBelow(currentFloor, orderMatrix) {
 			return dt.MovingDown
 		} else if anyOrdersAbove(currentFloor, orderMatrix) {
 			return dt.MovingUp
 		} else {
-			return dt.MovingStopped
+			return dt.MovingNeutral
 		}
 
 	default:
-		return dt.MovingStopped
+		return dt.MovingNeutral
 	}
 }

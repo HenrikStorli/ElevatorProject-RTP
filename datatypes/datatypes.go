@@ -9,7 +9,7 @@ type MoveDirectionType int
 const (
 	MovingInvalid MoveDirectionType = -99
 	MovingDown                      = -1
-	MovingStopped                   = 0
+	MovingNeutral                   = 0
 	MovingUp                        = 1
 )
 

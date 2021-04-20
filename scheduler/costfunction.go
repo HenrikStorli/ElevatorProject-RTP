@@ -20,7 +20,7 @@ func estimateOrderExecTime(elevator dt.ElevatorState, orderMatrix dt.OrderMatrix
 	case dt.IdleState:
 		simElevatorState.MovingDirection = ed.ChooseDirection(simElevatorState.MovingDirection, simElevatorState.Floor, boolOrderMatrix)
 		//An idle, non moving elevator is always the best choice
-		if simElevatorState.MovingDirection == dt.MovingStopped {
+		if simElevatorState.MovingDirection == dt.MovingNeutral {
 			return duration
 		}
 	case dt.MovingState:
