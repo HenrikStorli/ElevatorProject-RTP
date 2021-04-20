@@ -31,7 +31,7 @@ Windows:
 - remember to add to environment GOPATH (Miljøvariabler på norsk)
 - Open Control Panel » System » Advanced » Environment Variables
 - Click on GOPATH and select edit
-- add path to project, like "C:/go/project-gruppe-63"
+- add path to project, like *C:/go/project-gruppe-63*
 - apparently only one path should be set in GOPATH, so delete the existing one
 
 
