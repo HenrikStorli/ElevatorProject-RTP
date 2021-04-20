@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"time"
 
 	cf "./config"
@@ -11,7 +10,7 @@ import (
 	"./elevatordriver"
 	"./iomodule"
 	"./netmodule"
-	"./scheduler"
+	"./ordersscheduler"
 	"./statehandler"
 )
 
@@ -39,7 +38,7 @@ func main() {
 	acceptedOrderCh := make(chan dt.OrderType, orderMatrixBufferSize)
 	completedOrderFloorCh := make(chan int)
 
-	restartCh := make(chan bool)
+	connectNetworkCh := make(chan bool)
 
 	scheduledOrdersCh := make(chan dt.OrderType, 10)
 	buttonCallCh := make(chan dt.OrderType, 10)
@@ -50,8 +49,8 @@ func main() {
 	outgoingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType, 1)
 	incomingOrderCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
 
-	disconnectCh := make(chan int)
-	connectCh := make(chan int)
+	disconnectedIDCh := make(chan int)
+	connectedIDCh := make(chan int)
 
 	motorDirCh := make(chan dt.MoveDirectionType)
 	floorIndicatorCh := make(chan int)
@@ -71,7 +70,8 @@ func main() {
 		ports,
 		outgoingStateCh, incomingStateCh,
 		outgoingOrderCh, incomingOrderCh,
-		disconnectCh, connectCh,
+		disconnectedIDCh, connectedIDCh,
+		connectNetworkCh,
 	)
 
 	go iomodule.RunIOModule(
@@ -91,7 +91,7 @@ func main() {
 		elevatorID,
 		incomingOrderCh, outgoingOrderCh,
 		incomingStateCh, outgoingStateCh,
-		disconnectCh, connectCh,
+		disconnectedIDCh, connectedIDCh,
 		stateUpdateCh, orderUpdateCh,
 		scheduledOrdersCh,
 		buttonCallCh,
@@ -99,16 +99,16 @@ func main() {
 		acceptedOrderCh, completedOrderFloorCh,
 	)
 
-	go elevatordriver.RunStateMachine(
+	go elevatordriver.RunElevatorDriverModule(
 		elevatorID,
 		driverStateUpdateCh,
 		completedOrderFloorCh, acceptedOrderCh,
-		restartCh,
+		connectNetworkCh,
 		floorSensorCh, stopBtnCh, obstructionSwitchCh,
 		floorIndicatorCh, motorDirCh, doorOpenCh, stopLampCh,
 	)
 
-	go scheduler.RunOrdersScheduler(
+	go ordersscheduler.RunOrdersSchedulerModule(
 		elevatorID,
 		buttonCallCh,
 		stateUpdateCh, orderUpdateCh,
@@ -117,10 +117,6 @@ func main() {
 	)
 
 	for {
-		select {
-		case <-restartCh:
-			os.Exit(0)
-		}
 		time.Sleep(10 * time.Millisecond)
 	}
 

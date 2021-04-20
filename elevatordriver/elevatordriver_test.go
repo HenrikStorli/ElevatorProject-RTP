@@ -15,7 +15,7 @@ func TestElevatorDriverModule(*testing.T) {
 	completedOrdersCh := make(chan int)
 	//From statehandler
 	acceptedOrderCh := make(chan dt.OrderType)
-	restartCh := make(chan int)
+	restartCh := make(chan bool)
 	//From elevio
 	floorSwitchCh := make(chan int)
 	stopBtnCh := make(chan bool)
@@ -28,13 +28,13 @@ func TestElevatorDriverModule(*testing.T) {
 
 	elevatorID := 0
 
-	go elevatordriver.RunStateMachine(elevatorID, driverStateUpdateCh, completedOrdersCh,
+	go elevatordriver.RunElevatorDriverModule(elevatorID, driverStateUpdateCh, completedOrdersCh,
 		acceptedOrderCh, restartCh, floorSwitchCh, stopBtnCh, obstructionSwitchCh,
 		floorIndicatorCh, motorDirectionCh, doorOpenCh, setStopCh)
 
 	go func() {
 		time.Sleep(10 * time.Millisecond)
-		acceptedOrderCh <- dt.OrderType{Button: dt.BtnHallUp, Floor: 1}
+		acceptedOrderCh <- dt.OrderType{Button: dt.ButtonHallUp, Floor: 1}
 		time.Sleep(10 * time.Millisecond)
 	}()
 

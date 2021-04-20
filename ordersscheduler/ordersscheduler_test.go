@@ -1,4 +1,4 @@
-package scheduler_test
+package ordersscheduler_test
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	cf "../config"
 	dt "../datatypes"
 	"../iomodule"
-	"../scheduler"
+	"../ordersscheduler"
 )
 
 func TestSchedulerModule(*testing.T) {
@@ -20,15 +20,15 @@ func TestSchedulerModule(*testing.T) {
 
 	elevatorID := 0
 
-	go scheduler.RunOrdersScheduler(elevatorID, newOrderCh,
+	go ordersscheduler.RunOrdersSchedulerModule(elevatorID, newOrderCh,
 		elevatorStatesCh, orderMatricesCh, updateOrderMatricesCh, buttonLampCh)
 	//Define input
 	var mockStates [cf.ElevatorCount]dt.ElevatorState
 	var mockOrders [cf.ElevatorCount]dt.OrderMatrixType
-	mockOrders[0][0][0] = dt.New
-	mockOrders[1][0][0] = dt.New
-	mockOrders[1][1][0] = dt.New
-	mockOrders[1][2][0] = dt.Accepted
+	mockOrders[0][0][0] = dt.NewOrder
+	mockOrders[1][0][0] = dt.NewOrder
+	mockOrders[1][1][0] = dt.NewOrder
+	mockOrders[1][2][0] = dt.AcceptedOrder
 	fmt.Println(mockOrders)
 
 	mockStates[0].IsFunctioning = true
@@ -38,9 +38,9 @@ func TestSchedulerModule(*testing.T) {
 	elevatorStatesCh <- mockStates
 	orderMatricesCh <- mockOrders
 	time.Sleep(10 * time.Millisecond)
-	newOrderCh <- dt.OrderType{Button: dt.BtnHallUp, Floor: 1}
+	newOrderCh <- dt.OrderType{Button: dt.ButtonHallUp, Floor: 1}
 	time.Sleep(10 * time.Millisecond)
-	newOrderCh <- dt.OrderType{Button: dt.BtnHallDown, Floor: 3}
+	newOrderCh <- dt.OrderType{Button: dt.ButtonHallDown, Floor: 3}
 
 	updateOrderMatrices := <-updateOrderMatricesCh
 	fmt.Println(updateOrderMatrices)

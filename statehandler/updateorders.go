@@ -7,20 +7,26 @@ import (
 	dt "../datatypes"
 )
 
-func ackNewOrders(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType, singleElevator bool) [cf.ElevatorCount]dt.OrderMatrixType {
+func setCompletedOrdersToNone(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType, singleElevator bool) [cf.ElevatorCount]dt.OrderMatrixType {
 
 	updatedOrderMatrices := newOrderMatrices
 
 	for indexID := range newOrderMatrices {
-		if indexID != elevatorID {
-			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.New, dt.Acknowledged, updatedOrderMatrices[indexID])
-			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.Completed, dt.None, updatedOrderMatrices[indexID])
-		} else if singleElevator {
-			//We actually want the orders to go from completed to acknowledged when single elevators
-			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.Completed, dt.None, updatedOrderMatrices[indexID])
-			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.New, dt.Acknowledged, updatedOrderMatrices[indexID])
+		if indexID != elevatorID || singleElevator {
+			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.CompletedOrder, dt.NoOrder, updatedOrderMatrices[indexID])
 		}
+	}
+	return updatedOrderMatrices
+}
 
+func setNewOrdersToAck(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType, singleElevator bool) [cf.ElevatorCount]dt.OrderMatrixType {
+
+	updatedOrderMatrices := newOrderMatrices
+
+	for indexID := range newOrderMatrices {
+		if indexID != elevatorID || singleElevator {
+			updatedOrderMatrices[indexID] = replaceExistingOrders(dt.NewOrder, dt.AckedOrder, updatedOrderMatrices[indexID])
+		}
 	}
 	return updatedOrderMatrices
 }
@@ -29,11 +35,11 @@ func acceptAndSendOrders(elevatorID int, newOrderMatrices [cf.ElevatorCount]dt.O
 
 	updatedOrderMatrices := newOrderMatrices
 
-	for rowIndex, row := range newOrderMatrices[elevatorID] {
-		btn := dt.ButtonType(rowIndex)
+	for btnIndex, row := range newOrderMatrices[elevatorID] {
+		btn := dt.ButtonType(btnIndex)
 		for floor, newOrder := range row {
-			if newOrder == dt.Acknowledged {
-				updatedOrderMatrices[elevatorID][rowIndex][floor] = dt.Accepted
+			if newOrder == dt.AckedOrder {
+				updatedOrderMatrices[elevatorID][btnIndex][floor] = dt.AcceptedOrder
 
 				acceptedOrder := dt.OrderType{Button: btn, Floor: floor}
 				acceptedOrderCh <- acceptedOrder
@@ -76,12 +82,12 @@ func updateIncomingOrders(newOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType,
 func insertNewScheduledOrder(newScheduledOrder dt.OrderType, oldOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType) [cf.ElevatorCount]dt.OrderMatrixType {
 
 	updatedOrderMatrices := oldOrderMatrices
-	btn := int(newScheduledOrder.Button)
+	btnIndex := int(newScheduledOrder.Button)
 	floor := newScheduledOrder.Floor
 	elevatorID := newScheduledOrder.ElevatorID
 
-	oldOrder := &updatedOrderMatrices[elevatorID][btn][floor]
-	*oldOrder = updateSingleOrderState(dt.New, *oldOrder)
+	oldOrder := &updatedOrderMatrices[elevatorID][btnIndex][floor]
+	*oldOrder = updateSingleOrderState(dt.NewOrder, *oldOrder)
 
 	return updatedOrderMatrices
 }
@@ -91,26 +97,26 @@ func updateSingleOrderState(newOrder dt.OrderStateType, oldOrder dt.OrderStateTy
 
 	updatedOrder := oldOrder
 	switch oldOrder {
-	case dt.Unknown:
+	case dt.UnknownOrder:
 		updatedOrder = newOrder
-	case dt.None:
-		if newOrder == dt.New {
+	case dt.NoOrder:
+		if newOrder == dt.NewOrder {
 			updatedOrder = newOrder
 		}
-	case dt.New:
-		if newOrder == dt.Acknowledged {
+	case dt.NewOrder:
+		if newOrder == dt.AckedOrder {
 			updatedOrder = newOrder
 		}
-	case dt.Acknowledged:
-		if newOrder == dt.Accepted || newOrder == dt.Completed {
+	case dt.AckedOrder:
+		if newOrder == dt.AcceptedOrder || newOrder == dt.CompletedOrder {
 			updatedOrder = newOrder
 		}
-	case dt.Accepted:
-		if newOrder == dt.Completed {
+	case dt.AcceptedOrder:
+		if newOrder == dt.CompletedOrder {
 			updatedOrder = newOrder
 		}
-	case dt.Completed:
-		if newOrder == dt.None {
+	case dt.CompletedOrder:
+		if newOrder == dt.NoOrder {
 			updatedOrder = newOrder
 		}
 	}
@@ -122,10 +128,10 @@ func completeOrders(elevatorID int, completedOrderFloor int, oldOrderMatrices [c
 	updatedOrderMatrices := oldOrderMatrices
 	floor := completedOrderFloor
 
-	for rowIndex := range oldOrderMatrices {
-		oldOrder := oldOrderMatrices[elevatorID][rowIndex][floor]
-		if oldOrder == dt.Accepted {
-			updatedOrderMatrices[elevatorID][rowIndex][floor] = dt.Completed
+	for btnIndex := range oldOrderMatrices {
+		oldOrder := oldOrderMatrices[elevatorID][btnIndex][floor]
+		if oldOrder == dt.AcceptedOrder {
+			updatedOrderMatrices[elevatorID][btnIndex][floor] = dt.CompletedOrder
 		}
 	}
 
@@ -139,10 +145,10 @@ func redirectOrders(disconnectingElevatorID int, oldOrderMatrices [cf.ElevatorCo
 
 	ownOrderMatrix := oldOrderMatrices[disconnectingElevatorID]
 
-	for rowIndex, row := range ownOrderMatrix {
-		btn := dt.ButtonType(rowIndex)
+	for btnIndex, row := range ownOrderMatrix {
+		btn := dt.ButtonType(btnIndex)
 		//We dont redistribute cab calls
-		if btn == dt.BtnCab {
+		if btn == dt.ButtonCab {
 			continue
 		}
 		for floor, orderState := range row {
@@ -161,16 +167,16 @@ func removeRedirectedOrders(disconnectingElevatorID int, oldOrderMatrices [cf.El
 
 	ownOrderMatrix := oldOrderMatrices[disconnectingElevatorID]
 
-	for rowIndex, row := range ownOrderMatrix {
-		btn := dt.ButtonType(rowIndex)
+	for btnIndex, row := range ownOrderMatrix {
+		btn := dt.ButtonType(btnIndex)
 		for floor, orderState := range row {
-			newOrderState := dt.None
-			//We dont remove cab calls, but set them as Acknowledged
+			newOrderState := dt.NoOrder
+			//We dont remove cab calls, but set them as AckedOrder
 			//So that when the elevator reconnects it will execute the orders if it restarted
-			if btn == dt.BtnCab && isOrderActive(orderState) {
-				newOrderState = dt.Acknowledged
+			if btn == dt.ButtonCab && isOrderActive(orderState) {
+				newOrderState = dt.AckedOrder
 			}
-			oldOrder := &updatedOrderMatrices[disconnectingElevatorID][rowIndex][floor]
+			oldOrder := &updatedOrderMatrices[disconnectingElevatorID][btnIndex][floor]
 			*oldOrder = newOrderState
 		}
 	}
@@ -178,7 +184,7 @@ func removeRedirectedOrders(disconnectingElevatorID int, oldOrderMatrices [cf.El
 }
 
 func isOrderActive(orderState dt.OrderStateType) bool {
-	if orderState == dt.None || orderState == dt.Completed || orderState == dt.Unknown {
+	if orderState == dt.NoOrder || orderState == dt.CompletedOrder || orderState == dt.UnknownOrder {
 		return false
 	}
 	return true

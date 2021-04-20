@@ -38,15 +38,17 @@ func TestNetworkModule(*testing.T) {
 
 	fmt.Println("running module")
 
-	disconnectCh := make(chan int)
-	connectCh := make(chan int)
-	netmodule.RunNetworkModule(id1, ports, outgoingStateCh, incomingStateCh, outgoingOrderCh, incomingOrderCh, disconnectCh, connectCh)
+	disconnectIDCh := make(chan int)
+	connectIDCh := make(chan int)
+	connectCh := make(chan bool)
+
+	netmodule.RunNetworkModule(id1, ports, outgoingStateCh, incomingStateCh, outgoingOrderCh, incomingOrderCh, disconnectIDCh, connectIDCh, connectCh)
 
 	var mockState dt.ElevatorState
 	var mockOrders [cf.ElevatorCount]dt.OrderMatrixType
 
 	mockState = dt.ElevatorState{ElevatorID: 0, MovingDirection: dt.MovingDown, Floor: 1, State: 1, IsFunctioning: true}
-	mockOrders[2][1][3] = dt.New
+	mockOrders[2][1][3] = dt.NewOrder
 	go func() {
 		for {
 			outgoingStateCh <- mockState
