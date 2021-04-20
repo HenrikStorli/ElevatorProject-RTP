@@ -12,7 +12,7 @@ func estimateOrderExecTime(elevator dt.ElevatorState, orderMatrix dt.OrderMatrix
 	simElevatorState := elevator
 
 	boolOrderMatrix := convertOrderTypeToBool(orderMatrix)
-	boolOrderMatrix = ed.SetOrder(boolOrderMatrix, newOrder, ed.ACTIVE)
+	boolOrderMatrix = ed.SetOrder(boolOrderMatrix, newOrder, ed.activeOrder)
 
 	duration := 0
 
@@ -68,7 +68,7 @@ func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.OrderMatrixBool {
 	for btnIndex, row := range orderMatrix {
 		for floor, order := range row {
 			if order == dt.AcceptedOrder {
-				boolMatrix[btnIndex][floor] = ed.ACTIVE
+				boolMatrix[btnIndex][floor] = ed.activeOrder
 			}
 		}
 	}

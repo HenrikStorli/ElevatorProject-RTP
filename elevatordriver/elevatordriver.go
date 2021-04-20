@@ -15,7 +15,7 @@ const (
 
 type OrderMatrixBool [cf.ButtonCount][cf.FloorCount]bool
 
-func RunStateMachine(elevatorID int,
+func RunElevatorDriverModule(elevatorID int,
 	// To statehandler
 	driverStateUpdateCh chan<- dt.ElevatorState,
 	completedOrdersCh chan<- int,
@@ -105,7 +105,7 @@ func RunStateMachine(elevatorID int,
 
 			fmt.Printf("Accepting Order %v\n", newAcceptedOrder)
 
-			newOrderMatrix = SetOrder(orderMatrix, newAcceptedOrder, ACTIVE)
+			newOrderMatrix = SetOrder(orderMatrix, newAcceptedOrder, activeOrder)
 
 			if elevator.Floor == newAcceptedOrder.Floor {
 				if elevator.State == dt.DoorOpenState || elevator.State == dt.IdleState {

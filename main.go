@@ -99,7 +99,7 @@ func main() {
 		acceptedOrderCh, completedOrderFloorCh,
 	)
 
-	go elevatordriver.RunStateMachine(
+	go elevatordriver.RunElevatorDriverModule(
 		elevatorID,
 		driverStateUpdateCh,
 		completedOrderFloorCh, acceptedOrderCh,
@@ -108,7 +108,7 @@ func main() {
 		floorIndicatorCh, motorDirCh, doorOpenCh, stopLampCh,
 	)
 
-	go scheduler.RunOrdersScheduler(
+	go scheduler.RunOrdersSchedulerModule(
 		elevatorID,
 		buttonCallCh,
 		stateUpdateCh, orderUpdateCh,

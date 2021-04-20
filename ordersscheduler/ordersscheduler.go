@@ -8,7 +8,7 @@ import (
 	"../iomodule"
 )
 
-func RunOrdersScheduler(elevatorID int,
+func RunOrdersSchedulerModule(elevatorID int,
 	//From iomodule and orders scheduler
 	newOrderCh <-chan dt.OrderType,
 
@@ -30,7 +30,7 @@ func RunOrdersScheduler(elevatorID int,
 	for {
 		select {
 		case newOrder := <-newOrderCh:
-			if orderIsNew(elevatorID, newOrder, orderMatrices) {
+			if shouldDistributeOrder(elevatorID, newOrder, orderMatrices) {
 
 				scheduledOrder := placeOrder(elevatorID, newOrder, elevatorStates, orderMatrices)
 				newScheduledOrderCh <- scheduledOrder
@@ -67,7 +67,7 @@ func placeOrder(elevatorID int, newOrder dt.OrderType, elevatorStates [cf.Elevat
 	return scheduledOrder
 }
 
-func orderIsNew(elevatorID int, order dt.OrderType, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType) bool {
+func shouldDistributeOrder(elevatorID int, order dt.OrderType, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType) bool {
 
 	for indexID := range orderMatrices {
 		//Ignore cab calls from different elevators

@@ -20,7 +20,7 @@ func TestSchedulerModule(*testing.T) {
 
 	elevatorID := 0
 
-	go scheduler.RunOrdersScheduler(elevatorID, newOrderCh,
+	go scheduler.RunOrdersSchedulerModule(elevatorID, newOrderCh,
 		elevatorStatesCh, orderMatricesCh, updateOrderMatricesCh, buttonLampCh)
 	//Define input
 	var mockStates [cf.ElevatorCount]dt.ElevatorState
