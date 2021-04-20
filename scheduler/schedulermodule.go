@@ -99,7 +99,7 @@ func findFastestElevator(elevatorStates [cf.ElevatorCount]dt.ElevatorState, orde
 		if state.IsFunctioning {
 
 			executionTime := estimateOrderExecTime(state, orderMatrices[elevatorIndex], newOrder)
-
+			fmt.Printf("Execution time: %v \n", executionTime)
 			if executionTime < fastestExecutionTime {
 				fastestExecutionTime = executionTime
 				fastestElevatorIndex = elevatorIndex
