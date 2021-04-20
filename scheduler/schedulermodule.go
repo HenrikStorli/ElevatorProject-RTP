@@ -93,7 +93,7 @@ func orderIsNew(elevatorID int, order dt.OrderType, orderMatrices [cf.ElevatorCo
 func findFastestElevator(elevatorStates [cf.ElevatorCount]dt.ElevatorState, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType, newOrder dt.OrderType) int {
 
 	var fastestElevatorIndex int = 0
-	var fastestExecutionTime int = 1000
+	var fastestExecutionTime int = 1000000
 
 	for elevatorIndex, state := range elevatorStates {
 		if state.IsFunctioning {
