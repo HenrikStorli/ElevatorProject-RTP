@@ -10,7 +10,7 @@ import (
 	"./elevatordriver"
 	"./iomodule"
 	"./netmodule"
-	"./scheduler"
+	"./ordersscheduler"
 	"./statehandler"
 )
 
@@ -108,7 +108,7 @@ func main() {
 		floorIndicatorCh, motorDirCh, doorOpenCh, stopLampCh,
 	)
 
-	go scheduler.RunOrdersSchedulerModule(
+	go ordersscheduler.RunOrdersSchedulerModule(
 		elevatorID,
 		buttonCallCh,
 		stateUpdateCh, orderUpdateCh,

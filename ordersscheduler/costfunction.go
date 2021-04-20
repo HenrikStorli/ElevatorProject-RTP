@@ -1,4 +1,4 @@
-package scheduler
+package ordersscheduler
 
 import (
 	cf "../config"
@@ -12,7 +12,7 @@ func estimateOrderExecTime(elevator dt.ElevatorState, orderMatrix dt.OrderMatrix
 	simElevatorState := elevator
 
 	boolOrderMatrix := convertOrderTypeToBool(orderMatrix)
-	boolOrderMatrix = ed.SetOrder(boolOrderMatrix, newOrder, ed.activeOrder)
+	boolOrderMatrix = ed.SetOrder(boolOrderMatrix, newOrder, ed.ActiveOrder)
 
 	duration := 0
 
@@ -68,7 +68,7 @@ func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.OrderMatrixBool {
 	for btnIndex, row := range orderMatrix {
 		for floor, order := range row {
 			if order == dt.AcceptedOrder {
-				boolMatrix[btnIndex][floor] = ed.activeOrder
+				boolMatrix[btnIndex][floor] = ed.ActiveOrder
 			}
 		}
 	}

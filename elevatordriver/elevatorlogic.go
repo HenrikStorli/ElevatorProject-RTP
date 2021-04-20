@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	activeOrder   = true
+	ActiveOrder   = true
 	inActiveOrder = false
 )
 

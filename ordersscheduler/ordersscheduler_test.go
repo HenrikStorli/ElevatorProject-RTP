@@ -1,4 +1,4 @@
-package scheduler_test
+package ordersscheduler_test
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	cf "../config"
 	dt "../datatypes"
 	"../iomodule"
-	"../scheduler"
+	"../ordersscheduler"
 )
 
 func TestSchedulerModule(*testing.T) {
@@ -20,7 +20,7 @@ func TestSchedulerModule(*testing.T) {
 
 	elevatorID := 0
 
-	go scheduler.RunOrdersSchedulerModule(elevatorID, newOrderCh,
+	go ordersscheduler.RunOrdersSchedulerModule(elevatorID, newOrderCh,
 		elevatorStatesCh, orderMatricesCh, updateOrderMatricesCh, buttonLampCh)
 	//Define input
 	var mockStates [cf.ElevatorCount]dt.ElevatorState

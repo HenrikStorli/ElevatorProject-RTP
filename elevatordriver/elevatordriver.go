@@ -105,7 +105,7 @@ func RunElevatorDriverModule(elevatorID int,
 
 			fmt.Printf("Accepting Order %v\n", newAcceptedOrder)
 
-			newOrderMatrix = SetOrder(orderMatrix, newAcceptedOrder, activeOrder)
+			newOrderMatrix = SetOrder(orderMatrix, newAcceptedOrder, ActiveOrder)
 
 			if elevator.Floor == newAcceptedOrder.Floor {
 				if elevator.State == dt.DoorOpenState || elevator.State == dt.IdleState {
