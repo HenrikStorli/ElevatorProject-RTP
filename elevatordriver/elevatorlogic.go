@@ -86,6 +86,16 @@ func ClearOrdersAtCurrentFloor(currentFloor int, orderMatrix OrderMatrixBool) Or
 	return orderMatrix
 }
 
+func clearAllHallOrders(orderMatrix OrderMatrixBool) OrderMatrixBool {
+
+	for floor := 0; floor < cf.FloorCount; floor++ {
+		orderMatrix[dt.ButtonHallUp][floor] = inActiveOrder
+		orderMatrix[dt.ButtonHallDown][floor] = inActiveOrder
+	}
+
+	return orderMatrix
+}
+
 func anyOrdersAtCurrentFloor(currentFloor int, orderMatrix OrderMatrixBool) bool {
 
 	for btnIndex, _ := range orderMatrix {

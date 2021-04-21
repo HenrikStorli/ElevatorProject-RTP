@@ -163,7 +163,7 @@ func RunElevatorDriverModule(elevatorID int,
 				if newState == dt.IdleState || newState == dt.MovingState {
 					doorOpenCh <- closeDoor
 				}
-				
+
 			case dt.DoorOpenState:
 				if newState != dt.ErrorState {
 					doorOpenCh <- closeDoor
@@ -192,6 +192,8 @@ func RunElevatorDriverModule(elevatorID int,
 			case dt.ErrorState:
 				isFunctioning = false
 				connectNetworkCh <- false
+
+				newOrderMatrix = clearAllHallOrders(newOrderMatrix)
 			}
 
 			elevator.State = newState
