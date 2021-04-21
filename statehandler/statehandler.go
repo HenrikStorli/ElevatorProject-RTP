@@ -79,7 +79,7 @@ func RunStateHandlerModule(elevatorID int,
 			//If the elevator is single, skip the acknowlegdement step and accept new orders directly
 			if isSingleElevator(elevatorID, connectedElevators) {
 				updatedOrderMatrices = setNewOrdersToAck(elevatorID, updatedOrderMatrices, true)
-
+				fmt.Println("isSingleElevator")
 				updatedOrderMatrices = acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
 
 				outgoingOrderCh <- updatedOrderMatrices
@@ -98,8 +98,8 @@ func RunStateHandlerModule(elevatorID int,
 
 
 			if newDriverStateUpdate.State == dt.ErrorState {
-				updatedOrderMatrices := removeRedirectedOrders(newDriverStateUpdate.ElevatorID, orderMatrices)
-				orderMatrices = updatedOrderMatrices			
+				updatedOrderMatrices := removeAllOwnHallOrders(elevatorID, orderMatrices)
+				orderMatrices = updatedOrderMatrices
 			}
 
 			elevatorStates = updatedStates
