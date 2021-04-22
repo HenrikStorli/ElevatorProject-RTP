@@ -203,6 +203,30 @@ func removeAllOwnHallOrders(disconnectingElevatorID int, oldOrderMatrices [cf.El
 	return updatedOrderMatrices
 }
 
+func removeForiegnElevatorsHallOrders(elevatorID int, oldOrderMatrices [cf.ElevatorCount]dt.OrderMatrixType) [cf.ElevatorCount]dt.OrderMatrixType {
+	updatedOrderMatrices := oldOrderMatrices
+
+	for indexID, orderMatrix := range oldOrderMatrices {
+		if indexID != elevatorID {
+
+			for btnIndex, row := range orderMatrix {
+				btn := dt.ButtonType(btnIndex)
+
+				for floor, orderState := range row {
+					newOrderState := orderState
+
+					if btn == dt.ButtonHallUp || btn == dt.ButtonHallDown {
+						newOrderState = dt.UnknownOrder
+					}
+					oldOrder := &updatedOrderMatrices[indexID][btnIndex][floor]
+					*oldOrder = newOrderState
+				}
+			}
+		}
+	}
+	return updatedOrderMatrices
+}
+
 func isOrderActive(orderState dt.OrderStateType) bool {
 	if orderState == dt.NoOrder || orderState == dt.CompletedOrder || orderState == dt.UnknownOrder {
 		return false

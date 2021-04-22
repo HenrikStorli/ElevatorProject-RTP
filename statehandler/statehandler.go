@@ -70,19 +70,28 @@ func RunStateHandlerModule(elevatorID int,
 		// Order scheduler has made a new scheduled order
 		case newScheduledOrder := <-newScheduledOrderCh:
 
-			updatedOrderMatrices := insertNewScheduledOrder(newScheduledOrder, orderMatrices)
+			updatedOrderMatrices := orderMatrices
+
+			if isSingleElevator(elevatorID, connectedElevators) && newScheduledOrder.Button != dt.ButtonCab {
+				// Do nothing
+			} else {
+				updatedOrderMatrices = insertNewScheduledOrder(newScheduledOrder, orderMatrices)
+			}
+
 
 			if updatedOrderMatrices != orderMatrices {
 				outgoingOrderCh <- updatedOrderMatrices
 			}
 
 			//If the elevator is single, skip the acknowlegdement step and accept new orders directly
-			if isSingleElevator(elevatorID, connectedElevators) {
-				updatedOrderMatrices = setNewOrdersToAck(elevatorID, updatedOrderMatrices, true)
+			if isSingleElevator(elevatorID, connectedElevators){
 
+				updatedOrderMatrices = setNewOrdersToAck(elevatorID, updatedOrderMatrices, true)
+				fmt.Printf("I am a single elevator, and this is a cab call \n")
 				updatedOrderMatrices = acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
 
 				outgoingOrderCh <- updatedOrderMatrices
+
 			}
 
 			orderMatrices = updatedOrderMatrices
@@ -147,6 +156,14 @@ func RunStateHandlerModule(elevatorID int,
 
 				if disconnectingElevatorID == elevatorID {
 					//Business as usual
+					fmt.Printf("I disconnected \n")
+
+					//Set all other elevators hall orders to unknown if elevator disconnects
+					if isSingleElevator(elevatorID, updatedConnectedElevators){
+						fmt.Printf("I am in new territory \n")
+						updatedOrderMatrices = removeForiegnElevatorsHallOrders(elevatorID, orderMatrices)
+
+					}
 				} else {
 
 					//Remove existing hall calls
