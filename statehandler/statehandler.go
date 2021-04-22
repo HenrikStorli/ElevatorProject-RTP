@@ -70,14 +70,7 @@ func RunStateHandlerModule(elevatorID int,
 		// Order scheduler has made a new scheduled order
 		case newScheduledOrder := <-newScheduledOrderCh:
 
-			updatedOrderMatrices := orderMatrices
-
-			if isSingleElevator(elevatorID, connectedElevators) && newScheduledOrder.Button != dt.ButtonCab {
-				// Do nothing
-			} else {
-				updatedOrderMatrices = insertNewScheduledOrder(newScheduledOrder, orderMatrices)
-			}
-
+			updatedOrderMatrices := insertNewScheduledOrder(newScheduledOrder, orderMatrices)
 
 			if updatedOrderMatrices != orderMatrices {
 				outgoingOrderCh <- updatedOrderMatrices
@@ -87,7 +80,7 @@ func RunStateHandlerModule(elevatorID int,
 			if isSingleElevator(elevatorID, connectedElevators){
 
 				updatedOrderMatrices = setNewOrdersToAck(elevatorID, updatedOrderMatrices, true)
-				fmt.Printf("I am a single elevator, and this is a cab call \n")
+
 				updatedOrderMatrices = acceptAndSendOrders(elevatorID, updatedOrderMatrices, acceptedOrderCh)
 
 				outgoingOrderCh <- updatedOrderMatrices
