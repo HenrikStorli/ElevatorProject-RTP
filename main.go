@@ -22,27 +22,20 @@ func main() {
 		panic("Elevator ID is out of bounds")
 	}
 
-	ports := netmodule.NetworkPorts{
-		PeerTxPort:  cf.PeerTxPort,
-		PeerRxPort:  cf.PeerRxPort,
-		BcastRxPort: cf.BcastRxPort,
-		BcastTxPort: cf.BcastTxPort,
-	}
+	chBufferSize := cf.ButtonCount * cf.FloorCount
 
-	orderMatrixBufferSize := cf.ButtonCount * cf.FloorCount
-
-	stateUpdateCh := make(chan [cf.ElevatorCount]dt.ElevatorState, 1)
-	orderUpdateCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType, 1)
-
+	// Channels for elevator driver module
 	driverStateUpdateCh := make(chan dt.ElevatorState, 1)
-	acceptedOrderCh := make(chan dt.OrderType, orderMatrixBufferSize)
+	acceptedOrderCh := make(chan dt.OrderType, chBufferSize)
 	completedOrderFloorCh := make(chan int)
-
 	connectNetworkCh := make(chan bool)
 
+	// Channels for order scheduler module
+	stateUpdateCh := make(chan [cf.ElevatorCount]dt.ElevatorState, 1)
+	orderUpdateCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType, 1)
 	scheduledOrdersCh := make(chan dt.OrderType, 10)
-	buttonCallCh := make(chan dt.OrderType, 10)
 
+	// Channels for network module
 	outgoingStateCh := make(chan dt.ElevatorState, 1)
 	incomingStateCh := make(chan dt.ElevatorState)
 
@@ -52,22 +45,22 @@ func main() {
 	disconnectedIDCh := make(chan int)
 	connectedIDCh := make(chan int)
 
+	// Channels for IOModule
 	motorDirCh := make(chan dt.MoveDirectionType)
 	floorIndicatorCh := make(chan int)
 	doorOpenCh := make(chan bool)
 	stopLampCh := make(chan bool)
-	buttonLampCh := make(chan iomodule.ButtonLampType, orderMatrixBufferSize)
+	buttonLampCh := make(chan iomodule.ButtonLampType, chBufferSize)
 
+	buttonCallCh := make(chan dt.OrderType, 10)
 	floorSensorCh := make(chan int)
 	stopBtnCh := make(chan bool)
 	obstructionSwitchCh := make(chan bool)
 
-	time.Sleep(time.Second)
 	fmt.Println("Starting Modules...")
 
 	go netmodule.RunNetworkModule(
 		elevatorID,
-		ports,
 		outgoingStateCh, incomingStateCh,
 		outgoingOrderCh, incomingOrderCh,
 		disconnectedIDCh, connectedIDCh,
@@ -115,6 +108,8 @@ func main() {
 		scheduledOrdersCh,
 		buttonLampCh,
 	)
+
+	fmt.Println("Successfully initialised modules!")
 
 	for {
 		time.Sleep(10 * time.Millisecond)

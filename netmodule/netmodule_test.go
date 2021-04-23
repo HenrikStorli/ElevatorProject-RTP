@@ -23,13 +23,6 @@ func TestNetworkModule(*testing.T) {
 
 	fmt.Println("Testing Network Module")
 
-	ports := netmodule.NetworkPorts{
-		PeerTxPort:  16363,
-		PeerRxPort:  16363,
-		BcastRxPort: 26363,
-		BcastTxPort: 26363,
-	}
-
 	outgoingStateCh := make(chan dt.ElevatorState)
 	incomingStateCh := make(chan dt.ElevatorState)
 
@@ -42,12 +35,12 @@ func TestNetworkModule(*testing.T) {
 	connectIDCh := make(chan int)
 	connectCh := make(chan bool)
 
-	netmodule.RunNetworkModule(id1, ports, outgoingStateCh, incomingStateCh, outgoingOrderCh, incomingOrderCh, disconnectIDCh, connectIDCh, connectCh)
+	netmodule.RunNetworkModule(id1, outgoingStateCh, incomingStateCh, outgoingOrderCh, incomingOrderCh, disconnectIDCh, connectIDCh, connectCh)
 
 	var mockState dt.ElevatorState
 	var mockOrders [cf.ElevatorCount]dt.OrderMatrixType
 
-	mockState = dt.ElevatorState{ElevatorID: 0, MovingDirection: dt.MovingDown, Floor: 1, State: 1, IsFunctioning: true}
+	mockState = dt.ElevatorState{ElevatorID: 0, MovingDirection: dt.MovingDown, Floor: 1, State: dt.InitState, IsFunctioning: true}
 	mockOrders[2][1][3] = dt.NewOrder
 	go func() {
 		for {
@@ -60,9 +53,9 @@ func TestNetworkModule(*testing.T) {
 
 	for {
 		select {
-		case ID := <-disconnectCh:
+		case ID := <-disconnectIDCh:
 			fmt.Printf("Elevator %d disconnected\n", ID)
-		case ID := <-connectCh:
+		case ID := <-connectIDCh:
 			fmt.Printf("Elevator %d connected\n", ID)
 		case receivedState := <-incomingStateCh:
 

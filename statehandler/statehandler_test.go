@@ -34,11 +34,11 @@ func TestNetworkModule(*testing.T) {
 
 	driverStateUpdateCh := make(chan dt.ElevatorState)
 	acceptedOrderCh := make(chan dt.OrderType)
-	completedOrderCh := make(chan dt.OrderType)
+	completedFloorOrderCh := make(chan int)
 
 	disconnectCh := make(chan int)
 	connectCh := make(chan int)
-	newOrdersCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
+	scheduledOrdersCh := make(chan dt.OrderType)
 	redirectedOrderCh := make(chan dt.OrderType)
 
 	go statehandler.RunStateHandlerModule(id1, incomingOrderCh, outgoingOrderCh,
@@ -47,11 +47,11 @@ func TestNetworkModule(*testing.T) {
 		connectCh,
 		stateUpdateCh,
 		orderUpdateCh,
-		newOrdersCh,
+		scheduledOrdersCh,
 		redirectedOrderCh,
 		driverStateUpdateCh,
 		acceptedOrderCh,
-		completedOrderCh)
+		completedFloorOrderCh)
 
 	fmt.Println("Module is running")
 
@@ -65,8 +65,8 @@ func TestNetworkModule(*testing.T) {
 	go func() {
 		for {
 
-			mockState = dt.ElevatorState{ElevatorID: 0, MovingDirection: dt.MovingUp, Floor: 1, State: 1, IsFunctioning: true}
-			driverState := dt.ElevatorState{ElevatorID: 1, MovingDirection: dt.MovingDown, Floor: 2, State: 4, IsFunctioning: true}
+			mockState = dt.ElevatorState{ElevatorID: 0, MovingDirection: dt.MovingUp, Floor: 1, State: dt.InitState, IsFunctioning: true}
+			driverState := dt.ElevatorState{ElevatorID: 1, MovingDirection: dt.MovingDown, Floor: 2, State: dt.DoorOpenState, IsFunctioning: true}
 
 			incomingStateCh <- mockState
 			fmt.Println("Sent state")
@@ -77,7 +77,7 @@ func TestNetworkModule(*testing.T) {
 			driverStateUpdateCh <- driverState
 			fmt.Println("Sent driver state")
 			time.Sleep(5 * time.Second)
-			completedOrderCh <- dt.OrderType{Button: dt.ButtonHallUp, Floor: 0}
+			completedFloorOrderCh <- 0
 			fmt.Println("Sent completed order")
 			time.Sleep(5 * time.Second)
 			disconnectCh <- 2

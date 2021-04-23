@@ -36,7 +36,7 @@ const (
 )
 
 //RunNetworkModule is
-func RunNetworkModule(elevatorID int, networkPorts NetworkPorts,
+func RunNetworkModule(elevatorID int,
 	outgoingStateCh <-chan dt.ElevatorState,
 	incomingStateCh chan<- dt.ElevatorState,
 	outgoingOrderCh <-chan [cf.ElevatorCount]dt.OrderMatrixType,
@@ -51,6 +51,13 @@ func RunNetworkModule(elevatorID int, networkPorts NetworkPorts,
 		PeerUpdateCh: make(chan peers.PeerUpdate),
 		ReceiveCh:    make(chan networkPackage),
 		TransmitCh:   make(chan networkPackage),
+	}
+
+	networkPorts := NetworkPorts{
+		PeerTxPort:  cf.PeerTxPort,
+		PeerRxPort:  cf.PeerRxPort,
+		BcastRxPort: cf.BcastRxPort,
+		BcastTxPort: cf.BcastTxPort,
 	}
 
 	initNetworkConnections(elevatorID, networkPorts, networkChannels)

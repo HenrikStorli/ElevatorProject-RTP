@@ -15,13 +15,13 @@ func TestSchedulerModule(*testing.T) {
 	newOrderCh := make(chan dt.OrderType)
 	elevatorStatesCh := make(chan [cf.ElevatorCount]dt.ElevatorState)
 	orderMatricesCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
-	updateOrderMatricesCh := make(chan [cf.ElevatorCount]dt.OrderMatrixType)
+	newScheduledOrderCh := make(chan dt.OrderType)
 	buttonLampCh := make(chan iomodule.ButtonLampType)
 
 	elevatorID := 0
 
 	go ordersscheduler.RunOrdersSchedulerModule(elevatorID, newOrderCh,
-		elevatorStatesCh, orderMatricesCh, updateOrderMatricesCh, buttonLampCh)
+		elevatorStatesCh, orderMatricesCh, newScheduledOrderCh, buttonLampCh)
 	//Define input
 	var mockStates [cf.ElevatorCount]dt.ElevatorState
 	var mockOrders [cf.ElevatorCount]dt.OrderMatrixType
@@ -42,10 +42,10 @@ func TestSchedulerModule(*testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	newOrderCh <- dt.OrderType{Button: dt.ButtonHallDown, Floor: 3}
 
-	updateOrderMatrices := <-updateOrderMatricesCh
-	fmt.Println(updateOrderMatrices)
+	scheduledOrder := <-newScheduledOrderCh
+	fmt.Println(scheduledOrder)
 
-	updateOrderMatrices = <-updateOrderMatricesCh
-	fmt.Println(updateOrderMatrices)
+	scheduledOrder = <-newScheduledOrderCh
+	fmt.Println(scheduledOrder)
 
 }
