@@ -19,7 +19,7 @@ func estimateOrderExecTime(elevator dt.ElevatorState, orderMatrix dt.OrderMatrix
 	switch simElevatorState.State {
 	case dt.IdleState:
 		simElevatorState.MovingDirection = ed.ChooseDirection(simElevatorState.MovingDirection, simElevatorState.Floor, boolOrderMatrix)
-		//An idle, non moving elevator is always the best choice
+		//If the new order is in the same floor as an idle elevator, choose that elevator
 		if simElevatorState.MovingDirection == dt.MovingNeutral {
 			return duration
 		}
@@ -61,6 +61,7 @@ func estimateOrderExecTime(elevator dt.ElevatorState, orderMatrix dt.OrderMatrix
 	}
 }
 
+//Translates order matrix with OrderStateType elements to order matrix with bool elements
 func convertOrderTypeToBool(orderMatrix dt.OrderMatrixType) ed.OrderMatrixBool {
 
 	var boolMatrix ed.OrderMatrixBool
