@@ -14,7 +14,7 @@ const (
 	BcastTxPort     = 26363
 )
 
-const TimeoutStuckSec int = 7
+const TimeoutStuckSec int = 10
 
 const (
 	TravelTime   int = 4
