@@ -57,7 +57,7 @@ func placeOrder(elevatorID int, newOrder dt.OrderType, elevatorStates [cf.Elevat
 	if newOrder.Button == dt.ButtonCab {
 		fastestElevatorIndex = elevatorID
 	} else {
-		fastestElevatorIndex = findFastestElevator(elevatorStates, orderMatrices, newOrder)
+		fastestElevatorIndex = findFastestElevator(elevatorID, elevatorStates, orderMatrices, newOrder)
 	}
 
 	scheduledOrder.ElevatorID = fastestElevatorIndex
@@ -90,9 +90,9 @@ func shouldDistributeOrder(elevatorID int, order dt.OrderType, orderMatrices [cf
 	return true
 }
 
-func findFastestElevator(elevatorStates [cf.ElevatorCount]dt.ElevatorState, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType, newOrder dt.OrderType) int {
+func findFastestElevator(elevatorID int, elevatorStates [cf.ElevatorCount]dt.ElevatorState, orderMatrices [cf.ElevatorCount]dt.OrderMatrixType, newOrder dt.OrderType) int {
 
-	var fastestElevatorIndex int = 0
+	var fastestElevatorIndex int = elevatorID
 	var fastestExecutionTime int = 1000000
 
 	for elevatorIndex, state := range elevatorStates {

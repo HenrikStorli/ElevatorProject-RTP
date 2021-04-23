@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	OPEN_DOOR  = true
-	CLOSE_DOOR = false
+	openDoor  = true
+	closeDoor = false
 )
 
 type OrderMatrixBool [cf.ButtonCount][cf.FloorCount]bool
@@ -70,7 +70,7 @@ func RunElevatorDriverModule(elevatorID int,
 	go runTimeOut(timeDoorOpen, restartDoorTimerCh, make(<-chan bool), doorClosingTimerCh)
 
 	// Close door at start
-	doorOpenCh <- CLOSE_DOOR
+	doorOpenCh <- closeDoor
 
 	// Initialize the elevator position
 	select {
@@ -120,16 +120,12 @@ func RunElevatorDriverModule(elevatorID int,
 
 			if ElevatorShouldStop(elevator.MovingDirection, floor, orderMatrix) {
 				newState = dt.DoorOpenState
+			} else if oldState == dt.ErrorState {
+				newState = dt.MovingState
 			}
 
 			floorIndicatorCh <- floor
 			restartFailTimerCh <- true
-
-			if oldState == dt.ErrorState {
-				connectNetworkCh <- true
-				isFunctioning = true
-			}
-
 			newFloor = floor
 
 		case <-doorClosingTimerCh:
@@ -163,9 +159,14 @@ func RunElevatorDriverModule(elevatorID int,
 			case dt.ErrorState:
 				connectNetworkCh <- true
 				isFunctioning = true
+
+				if newState == dt.IdleState || newState == dt.MovingState {
+					doorOpenCh <- closeDoor
+				}
+
 			case dt.DoorOpenState:
 				if newState != dt.ErrorState {
-					doorOpenCh <- CLOSE_DOOR
+					doorOpenCh <- closeDoor
 				}
 			}
 
@@ -179,7 +180,7 @@ func RunElevatorDriverModule(elevatorID int,
 
 				restartDoorTimerCh <- true
 
-				doorOpenCh <- OPEN_DOOR
+				doorOpenCh <- openDoor
 				newOrderMatrix = ClearOrdersAtCurrentFloor(newFloor, newOrderMatrix)
 				completedOrdersCh <- newFloor
 
@@ -191,6 +192,8 @@ func RunElevatorDriverModule(elevatorID int,
 			case dt.ErrorState:
 				isFunctioning = false
 				connectNetworkCh <- false
+
+				newOrderMatrix = clearAllHallOrders(newOrderMatrix)
 			}
 
 			elevator.State = newState

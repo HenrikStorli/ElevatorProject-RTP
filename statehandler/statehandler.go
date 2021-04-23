@@ -96,6 +96,12 @@ func RunStateHandlerModule(elevatorID int,
 
 			stateUpdateCh <- updatedStates
 
+
+			if newDriverStateUpdate.State == dt.ErrorState {
+				updatedOrderMatrices := removeAllOwnHallOrders(elevatorID, orderMatrices)
+				orderMatrices = updatedOrderMatrices
+			}
+
 			elevatorStates = updatedStates
 
 		// Elevator drivers has completed orders on this floor
